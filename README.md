@@ -2,7 +2,7 @@
 
 **Type-safe AWS EventBridge patterns from Zod schemas**
 
-[![npm version](https://img.shields.io/npm/v/eventkit.svg)](https://www.npmjs.com/package/eventkit)
+[![npm version](https://img.shields.io/npm/v/@divmode/eventkit.svg)](https://www.npmjs.com/package/@divmode/eventkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![AWS EventBridge](https://img.shields.io/badge/AWS-EventBridge-orange.svg)](https://aws.amazon.com/eventbridge/)
@@ -21,11 +21,11 @@ Generate type-safe AWS EventBridge patterns with zero runtime overhead. Transfor
 ## 📦 Installation
 
 ```bash
-npm install eventkit zod
+npm install @divmode/eventkit zod
 # or
-yarn add eventkit zod
+yarn add @divmode/eventkit zod
 # or
-bun add eventkit zod
+bun add @divmode/eventkit zod
 ```
 
 ## ⚙️ Configuration
@@ -72,7 +72,7 @@ export AWS_PROFILE="your-profile-name"
 ### 1. Define Events
 
 ```typescript
-import { Event, createEventBus } from "eventkit/runtime";
+import { Event, createEventBus } from "@divmode/eventkit/runtime";
 import { z } from "zod";
 
 const OrderCreated = new Event({
@@ -208,10 +208,10 @@ EventKit automatically discovers and syncs your events with AWS EventBridge Sche
 
 ```bash
 # Discover and register all schemas
-npx eventkit register-schemas
+npx @divmode/eventkit register-schemas
 
 # Sync schemas (add new, update changed, remove orphaned)
-npx eventkit sync-schemas
+npx @divmode/eventkit sync-schemas
 ```
 
 Your Event definitions become the source of truth for your event contracts across teams.
@@ -311,7 +311,7 @@ const pattern = MyEvent.pattern({
 Create type-safe Lambda handlers for EventBridge events:
 
 ```typescript
-import { createEventHandler } from "eventkit/runtime";
+import { createEventHandler } from "@divmode/eventkit/runtime";
 
 export const handler = createEventHandler(
   [OrderCreated, OrderUpdated],
@@ -337,17 +337,17 @@ export const handler = createEventHandler(
 Scan your codebase and register Event schemas with AWS EventBridge Schema Registry:
 
 ```bash
-npx eventkit register-schemas
+npx @divmode/eventkit register-schemas
 ```
 
 ### Auto-sync Schemas
 Sync schemas with EventBridge (creates, updates, removes orphaned):
 
 ```bash
-npx eventkit sync-schemas
+npx @divmode/eventkit sync-schemas
 
 # Keep orphaned schemas
-npx eventkit sync-schemas --no-delete
+npx @divmode/eventkit sync-schemas --no-delete
 ```
 
 ## 🎯 API Reference
@@ -387,7 +387,7 @@ type OrderSchema = SchemaFor<typeof OrderCreated>;
 EventKit includes special helpers for [SST](https://sst.dev) projects:
 
 ```typescript
-import { createEventRule } from "eventkit/sst";
+import { createEventRule } from "@divmode/eventkit/sst";
 
 // Automatic resource wiring with SST
 createEventRule(OrderCreated, {

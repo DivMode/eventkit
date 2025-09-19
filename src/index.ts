@@ -7,7 +7,7 @@
  *
  * @example
  * ```typescript
- * import { Event, createEventBus } from "eventkit";
+ * import { Event, createEventBus } from "@divmode/eventkit";
  * import { z } from "zod";
  *
  * const OrderCreated = new Event({
