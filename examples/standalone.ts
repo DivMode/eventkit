@@ -15,8 +15,8 @@
  *    npm install eventkit zod @aws-sdk/client-eventbridge
  */
 
-import { createEventBus, Event } from "eventkit/runtime";
 import { z } from "zod";
+import { createEventBus, Event } from "../src/runtime/index.js";
 
 // =============================================================================
 // Event Definitions
@@ -136,10 +136,10 @@ export type OrderData = z.infer<typeof OrderCreated.schema>;
 export type PaymentData = z.infer<typeof PaymentProcessed.schema>;
 
 // Filter types for pattern generation
-export type OrderFilter = import("eventkit/runtime").FilterFor<
+export type OrderFilter = import("../src/runtime/index.js").FilterFor<
   typeof OrderCreated
 >;
-export type PaymentFilter = import("eventkit/runtime").FilterFor<
+export type PaymentFilter = import("../src/runtime/index.js").FilterFor<
   typeof PaymentProcessed
 >;
 
