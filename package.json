@@ -1,6 +1,6 @@
 {
   "name": "eventkit",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Type-safe AWS EventBridge toolkit. Generate patterns from Zod schemas, publish events, auto-register schemas, and build event-driven architectures with full TypeScript support.",
   "type": "module",
   "main": "./dist/index.js",
