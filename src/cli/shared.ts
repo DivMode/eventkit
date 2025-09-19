@@ -1,4 +1,5 @@
-import { Glob } from "bun";
+import fg from "fast-glob";
+import { readFile } from "node:fs/promises";
 import { schemaRegistry } from "../registry/eventbridge";
 import { Event } from "../runtime/Event";
 
@@ -25,27 +26,33 @@ export async function scanForEventFiles(): Promise<string[]> {
 
   console.log("📂 Scanning for files...");
 
-  // Only scan specific source directories to avoid scanning too many files
-  const sourceDirs = ["packages", "src", "app", "lib", "infra"];
-  const sourceGlob = new Glob(`{${sourceDirs.join(",")}}/**/*.{ts,js}`);
+  // Scan all TypeScript and JavaScript files in the project
+  const pattern = "**/*.{ts,js}";
 
-  for await (const file of sourceGlob.scan(rootPath)) {
-    // Skip common build/cache folders and dot files
-    if (
-      !file.includes("node_modules") &&
-      !file.includes(".git") &&
-      !file.includes("dist/") &&
-      !file.includes("build/") &&
-      !file.includes(".next/") &&
-      !file.includes(".cache/") &&
-      !file.includes(".turbo/") &&
-      !file.includes("coverage/") &&
-      !file.startsWith(".") &&
-      !file.includes("/.")
-    ) {
-      allFiles.push(file);
-    }
-  }
+  const files = await fg(pattern, {
+    cwd: rootPath,
+    ignore: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/.cache/**",
+      "**/.turbo/**",
+      "**/coverage/**",
+      "**/.*",
+      "**/.*/**",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/test/**",
+      "**/tests/**",
+      "**/__tests__/**",
+      "**/eventkit/**",
+      "**/@divmode/eventkit/**"
+    ]
+  });
+
+  allFiles.push(...files);
 
   console.log(`📁 Found ${allFiles.length} files to scan`);
   return allFiles;
@@ -69,7 +76,7 @@ export async function collectEventInstances(files: string[]): Promise<{
       const fullPath = `${rootPath}/${file}`;
 
       // Only try to import files that might contain Event definitions
-      const content = await Bun.file(fullPath).text();
+      const content = await readFile(fullPath, 'utf-8');
 
       // Quick check if file might contain Event instances
       if (content.includes("new Event(") || content.includes("Event({")) {

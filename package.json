@@ -1,6 +1,6 @@
 {
   "name": "@divmode/eventkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Type-safe AWS EventBridge toolkit. Generate patterns from Zod schemas, publish events, auto-register schemas, and build event-driven architectures with full TypeScript support.",
   "type": "module",
   "main": "./dist/index.js",
@@ -65,6 +65,7 @@
   "author": "Divmode",
   "license": "MIT",
   "dependencies": {
+    "fast-glob": "^3.3.3",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

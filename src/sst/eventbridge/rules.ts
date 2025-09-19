@@ -1,4 +1,5 @@
-import * as aws from "@pulumi/aws";
+// Import AWS types for type annotations
+import type * as _aws from "@pulumi/aws";
 import type { z } from "zod";
 import type { FilterFor } from "../../runtime/Event";
 import { Event } from "../../runtime/Event";
@@ -14,6 +15,9 @@ import type {
   EventRuleResult,
   PulumiOutput,
 } from "./types";
+
+// Global aws variable available in SST infrastructure context
+declare const aws: typeof _aws;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -88,9 +92,9 @@ function createEventPattern<E extends Event<string, z.ZodType>>(
  */
 function createRuleTarget<E extends Event<string, z.ZodType>>(
   config: EventRuleConfig<E>,
-  rule: aws.cloudwatch.EventRule,
+  rule: _aws.cloudwatch.EventRule,
   firstEvent: E,
-): aws.cloudwatch.EventTarget {
+): _aws.cloudwatch.EventTarget {
   if (!config.target) {
     throw new Error("Target configuration is required");
   }
@@ -124,9 +128,9 @@ function createRuleTarget<E extends Event<string, z.ZodType>>(
  */
 function createQueuePolicy(
   name: string,
-  rule: aws.cloudwatch.EventRule,
+  rule: _aws.cloudwatch.EventRule,
   destination: EventBridgeDestination,
-): aws.sqs.QueuePolicy | undefined {
+): _aws.sqs.QueuePolicy | undefined {
   const arnType = getArnType(destination.arn);
 
   if (arnType === "sqs" && destination.url) {
