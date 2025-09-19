@@ -8,23 +8,23 @@
   "exports": {
     ".": {
       "bun": "./src/index.ts",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
     },
     "./runtime": {
       "bun": "./src/runtime/index.ts",
-      "import": "./dist/runtime/index.js",
-      "types": "./dist/runtime/index.d.ts"
+      "types": "./src/runtime/index.ts",
+      "import": "./dist/runtime/index.js"
     },
     "./registry": {
       "bun": "./src/registry/index.ts",
-      "import": "./dist/registry/index.js",
-      "types": "./dist/registry/index.d.ts"
+      "types": "./src/registry/index.ts",
+      "import": "./dist/registry/index.js"
     },
     "./sst": {
       "bun": "./src/sst/index.ts",
-      "import": "./dist/sst/index.js",
-      "types": "./dist/sst/index.d.ts"
+      "types": "./src/sst/index.ts",
+      "import": "./dist/sst/index.js"
     }
   },
   "files": [
