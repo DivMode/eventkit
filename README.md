@@ -128,7 +128,65 @@ console.log(JSON.stringify(pattern, null, 2));
 // }
 ```
 
-### 3. Cross-Workspace Event Usage
+### 3. Batch Publishing & Performance
+
+EventKit automatically handles batching and chunking for high-performance event publishing:
+
+```typescript
+// ❌ Inefficient - Multiple API calls
+await OrderCreated.publish({ orderId: "1", amount: 100 });
+await OrderCreated.publish({ orderId: "2", amount: 200 });
+await OrderCreated.publish({ orderId: "3", amount: 300 });
+// 3 separate API calls to EventBridge
+
+// ✅ Efficient - Single batched API call
+const events = [
+  OrderCreated.create({ orderId: "1", amount: 100 }),
+  OrderCreated.create({ orderId: "2", amount: 200 }),
+  OrderCreated.create({ orderId: "3", amount: 300 }),
+];
+await OrderCreated.bus.put(events);  // 1 API call with automatic chunking!
+
+// ✅ Transaction Pattern - Only publish if DB succeeds
+const events = [];
+await db.transaction(async (tx) => {
+  const order = await tx.insert(orders).values(orderData);
+  events.push(OrderCreated.create(order));
+
+  const payment = await tx.insert(payments).values(paymentData);
+  events.push(PaymentProcessed.create(payment));
+});
+// Events only sent if transaction commits
+await OrderCreated.bus.put(events);
+
+// ✅ Mixed Event Types - Different events in one batch
+const events = [
+  OrderCreated.create({ orderId: "123", amount: 100 }),
+  UserRegistered.create({ userId: "456", email: "test@example.com" }),
+  InventoryUpdated.create({ sku: "PROD-789", quantity: 50 })
+];
+await OrderCreated.bus.put(events);  // All sent together efficiently
+
+// ✅ High Volume - Automatic chunking handles AWS limits
+const events = domains.map(domain =>
+  DomainDetected.create({
+    domain: domain.name,
+    status: domain.status,
+    price: domain.price
+  })
+);
+// 1000 events automatically split into 100 parallel requests (10 events each)
+await DomainDetected.bus.put(events);
+```
+
+**🚀 Automatic Chunking Features:**
+- **Smart Batching**: Automatically splits at 10 events per request (AWS limit)
+- **Size Management**: Splits if total payload > 256KB (AWS limit)
+- **Parallel Processing**: Sends chunks in parallel for maximum throughput
+- **Result Merging**: Combines all responses into single result
+- **Zero Configuration**: Works transparently - just pass arrays to `bus.put()`
+
+### 4. Cross-Workspace Event Usage
 
 The lazy bus pattern enables Events to be imported anywhere without AWS setup:
 
@@ -357,14 +415,22 @@ npx @divmode/eventkit sync-schemas --no-delete
 **`pattern(filter?)`** - Generate EventBridge pattern from your schema
 Returns EventBridge-compatible JSON pattern for creating rules
 
-**`publish(properties)`** - Publish event to EventBridge
-Validates against schema and returns AWS response with EventId
+**`publish(properties)`** - Convenience method for single event publishing
+Validates against schema, immediately sends to EventBridge, returns AWS response with EventId
 
 **`create(properties)`** - Create event entry for batch publishing
-Returns PutEventsRequestEntry for batch operations
+Validates against schema, returns PutEventsRequestEntry for use with `bus.put()`
+Use this for batching multiple events or conditional publishing
 
 **`Event.computePattern(events[], filter?)`** - Multi-event patterns
 Generate single pattern matching multiple event types
+
+### Bus Class
+
+**`bus.put(events[])`** - Batch publish events with automatic chunking
+Accepts array of PutEventsRequestEntry objects (from `event.create()`)
+Automatically handles AWS limits: 10 events per request, 256KB max size
+Sends chunks in parallel and merges results
 
 ### Type Helpers
 
