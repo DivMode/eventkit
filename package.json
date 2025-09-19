@@ -1,6 +1,6 @@
 {
   "name": "@divmode/eventkit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Type-safe AWS EventBridge toolkit. Generate patterns from Zod schemas, publish events, auto-register schemas, and build event-driven architectures with full TypeScript support.",
   "type": "module",
   "main": "./dist/index.js",
@@ -98,12 +98,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/divmode/eventkit.git"
+    "url": "https://github.com/DivMode/eventkit"
   },
   "bugs": {
-    "url": "https://github.com/divmode/eventkit/issues"
+    "url": "https://github.com/DivMode/eventkit/issues"
   },
-  "homepage": "https://github.com/divmode/eventkit#readme",
+  "homepage": "https://github.com/DivMode/eventkit#readme",
   "publishConfig": {
     "access": "public"
   }
