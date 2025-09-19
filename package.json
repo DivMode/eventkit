@@ -7,18 +7,22 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./runtime": {
+      "bun": "./src/runtime/index.ts",
       "import": "./dist/runtime/index.js",
       "types": "./dist/runtime/index.d.ts"
     },
     "./registry": {
+      "bun": "./src/registry/index.ts",
       "import": "./dist/registry/index.js",
       "types": "./dist/registry/index.d.ts"
     },
     "./sst": {
+      "bun": "./src/sst/index.ts",
       "import": "./dist/sst/index.js",
       "types": "./dist/sst/index.d.ts"
     }
