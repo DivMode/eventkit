@@ -25,13 +25,13 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Run tests
-        run: npm test
+        run: bun test
 
       - name: Build package
-        run: npm run build
+        run: bun run build
 
       - name: Get package version
         id: version
@@ -58,8 +58,7 @@ jobs:
         run: |
           gh release create ${{ steps.version.outputs.tag }} \
             --title "EventKit v${{ steps.version.outputs.version }}" \
-            --notes "Auto-generated release for EventKit v${{ steps.version.outputs.version }}" \
-            --verify-tag
+            --notes "Auto-generated release for EventKit v${{ steps.version.outputs.version }}"
 
       - name: Publish to npm
         if: steps.release_exists.outputs.exists == 'false'
