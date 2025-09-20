@@ -1,6 +1,6 @@
 {
   "name": "@divmode/eventkit",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Type-safe AWS EventBridge toolkit. Generate patterns from Zod schemas, publish events, auto-register schemas, and build event-driven architectures with full TypeScript support.",
   "type": "module",
   "main": "./dist/index.js",
@@ -70,18 +70,21 @@
   },
   "peerDependencies": {
     "typescript": ">=4.9.0",
-    "@aws-sdk/client-eventbridge": "^3.0.0"
+    "@aws-sdk/client-eventbridge": "^3.0.0",
+    "sst": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-eventbridge": {
       "optional": false
+    },
+    "sst": {
+      "optional": true
     }
   },
   "optionalDependencies": {
     "@aws-sdk/client-schemas": "^3.0.0",
     "@pulumi/aws": "^6.0.0",
-    "@pulumi/pulumi": "^3.0.0",
-    "sst": "^3.0.0"
+    "@pulumi/pulumi": "^3.0.0"
   },
   "devDependencies": {
     "@pulumi/aws": "^6.0.0",

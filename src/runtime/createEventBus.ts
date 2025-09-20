@@ -57,45 +57,74 @@ function validateAwsCredentials(): void {
 /**
  * Universal EventBridge bus factory for EventKit
  *
- * Works in multiple contexts:
- * - SST projects: Uses Resource.Bus.name automatically
- * - Standalone: Uses EVENTKIT_BUS_NAME environment variable
- * - AWS environments: Validates credentials are available
+ * Works in multiple contexts with version-agnostic SST support:
+ * - Environment variable: EVENTKIT_BUS_NAME (fastest, most reliable)
+ * - SST linkable resources: SST_RESOURCE_Bus_name (automatic in SST runtime)
+ * - SST projects: Uses Resource.Bus.name dynamically (any SST v3+)
+ * - Standalone: Manual configuration via environment variables
+ *
+ * Priority order:
+ * 1. EVENTKIT_BUS_NAME environment variable
+ * 2. SST_RESOURCE_Bus_name (SST linkable resource)
+ * 3. Dynamic SST Resource detection (safe require-based, version-agnostic)
  *
  * @throws {Error} If bus name or AWS credentials are not configured
  * @returns {Bus} Configured EventBridge bus instance
  */
 export function createEventBus(): Bus {
-  // Try SST context first (for monorepo usage)
-  try {
-    const { Resource } = require("sst");
+  // Check for explicit bus name first (fastest and most reliable path)
+  // Supports both manual config and SST linkable resources via env vars
+  const explicitBusName =
+    process.env.EVENTKIT_BUS_NAME ||
+    process.env.SST_RESOURCE_Bus_name;
 
-    // In SST context, AWS credentials are typically handled by the framework
-    return new Bus({
-      name: Resource.Bus.name,
-      EventBridge: new EventBridgeClient({}),
-    });
-  } catch (sstError) {
-    // SST not available - fall back to environment variables
-    const busName = process.env.EVENTKIT_BUS_NAME;
-
-    if (!busName) {
-      throw new Error(
-        "EventKit bus configuration required. Either:\n" +
-          "1. Use in SST context with Resource.Bus configured, or\n" +
-          "2. Set EVENTKIT_BUS_NAME environment variable\n\n" +
-          "Example: EVENTKIT_BUS_NAME='my-event-bus'\n\n" +
-          "Note: Pattern generation works without configuration - only publishing requires bus setup.",
-      );
-    }
-
-    // Validate AWS credentials before creating client
+  if (explicitBusName) {
     validateAwsCredentials();
-
     const region = process.env.AWS_REGION;
     return new Bus({
-      name: busName,
+      name: explicitBusName,
       EventBridge: new EventBridgeClient(region ? { region } : {}),
     });
+  }
+
+  // Try SST context only if no explicit bus name (for monorepo usage)
+  // Use safe dynamic require to avoid version conflicts
+  try {
+    // Safely attempt to load SST without eval()
+    // This prevents bundlers from including SST while avoiding security risks
+    let sstModule: any;
+    try {
+      // Use dynamic require via module resolution
+      const moduleName = 'sst';
+      sstModule = require(moduleName);
+    } catch (requireError) {
+      // SST not available - this is expected in non-SST environments
+      throw new Error(`SST module not available: ${requireError instanceof Error ? requireError.message : String(requireError)}`);
+    }
+
+    // Handle different SST versions and structures safely
+    const Resource = sstModule?.Resource;
+    const busName = Resource?.Bus?.name;
+
+    if (busName && typeof busName === 'string') {
+      // In SST context, AWS credentials are typically handled by the framework
+      return new Bus({
+        name: busName,
+        EventBridge: new EventBridgeClient({}),
+      });
+    } else {
+      throw new Error("SST Resource.Bus.name not found or invalid");
+    }
+  } catch (sstError) {
+    // SST not available or Resource.Bus not configured - provide helpful error
+    throw new Error(
+      "EventKit bus configuration required. Either:\n" +
+        "1. Set EVENTKIT_BUS_NAME environment variable:\n" +
+        "   export EVENTKIT_BUS_NAME='my-event-bus'\n\n" +
+        "2. Use in SST context with Resource.Bus configured\n\n" +
+        "3. For SST projects, ensure 'sst dev' is running or deploy first\n\n" +
+        "Note: Pattern generation works without configuration - only publishing requires bus setup.\n" +
+        `Debug info: ${sstError instanceof Error ? sstError.message : String(sstError)}`,
+    );
   }
 }
