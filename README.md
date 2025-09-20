@@ -140,12 +140,11 @@ await OrderCreated.publish({ orderId: "3", amount: 300 });
 // 3 separate API calls to EventBridge
 
 // ✅ Efficient - Single batched API call
-const events = [
-  OrderCreated.create({ orderId: "1", amount: 100 }),
-  OrderCreated.create({ orderId: "2", amount: 200 }),
-  OrderCreated.create({ orderId: "3", amount: 300 }),
-];
-await OrderCreated.bus.put(events);  // 1 API call with automatic chunking!
+await OrderCreated.publish([
+  { orderId: "1", amount: 100 },
+  { orderId: "2", amount: 200 },
+  { orderId: "3", amount: 300 },
+]);  // 1 API call with automatic chunking!
 
 // ✅ Transaction Pattern - Only publish if DB succeeds
 const events = [];
@@ -157,26 +156,24 @@ await db.transaction(async (tx) => {
   events.push(PaymentProcessed.create(payment));
 });
 // Events only sent if transaction commits
-await OrderCreated.bus.put(events);
+await OrderCreated.publish(events);
 
 // ✅ Mixed Event Types - Different events in one batch
-const events = [
+await OrderCreated.publish([
   OrderCreated.create({ orderId: "123", amount: 100 }),
   UserRegistered.create({ userId: "456", email: "test@example.com" }),
   InventoryUpdated.create({ sku: "PROD-789", quantity: 50 })
-];
-await OrderCreated.bus.put(events);  // All sent together efficiently
+]);  // All sent together efficiently
 
 // ✅ High Volume - Automatic chunking handles AWS limits
-const events = domains.map(domain =>
-  DomainDetected.create({
+await DomainDetected.publish(
+  domains.map(domain => ({
     domain: domain.name,
     status: domain.status,
     price: domain.price
-  })
+  }))
 );
 // 1000 events automatically split into 100 parallel requests (10 events each)
-await DomainDetected.bus.put(events);
 ```
 
 **🚀 Automatic Chunking Features:**
@@ -184,9 +181,130 @@ await DomainDetected.bus.put(events);
 - **Size Management**: Splits if total payload > 256KB (AWS limit)
 - **Parallel Processing**: Sends chunks in parallel for maximum throughput
 - **Result Merging**: Combines all responses into single result
-- **Zero Configuration**: Works transparently - just pass arrays to `bus.put()`
+- **Zero Configuration**: Works transparently with `publish()`
 
-### 4. Cross-Workspace Event Usage
+### 4. When to use create() vs publish()
+
+Understanding when to use each method is key to effective event publishing:
+
+#### Use `publish()` for immediate sending
+```typescript
+// ✅ Fire and forget - just send it
+await OrderCreated.publish({ orderId: "123", amount: 100 });
+
+// ✅ Direct batching - multiple of same type
+await OrderCreated.publish([
+  { orderId: "1", amount: 100 },
+  { orderId: "2", amount: 200 }
+]);
+```
+
+#### Use `create()` for deferred/conditional sending
+```typescript
+// ✅ Conditional collection - decide later
+const events = [];
+if (shouldNotifyUser) {
+  events.push(UserNotified.create({ userId: "123" }));
+}
+if (shouldUpdateInventory) {
+  events.push(InventoryUpdated.create({ sku: "ABC", quantity: 5 }));
+}
+// Only send if we have events
+if (events.length > 0) {
+  await UserNotified.publish(events);
+}
+
+// ✅ Transaction pattern - only send if DB succeeds
+const events = [];
+try {
+  await db.transaction(async (tx) => {
+    const order = await tx.insert(orders).values(orderData);
+    events.push(OrderCreated.create(order));
+
+    await tx.insert(inventory).values(inventoryUpdate);
+    events.push(InventoryUpdated.create(inventoryUpdate));
+  });
+
+  // Transaction succeeded - now publish events
+  await OrderCreated.publish(events);
+} catch (error) {
+  // Transaction failed - no events sent
+  console.log("Transaction failed, no events published");
+}
+
+// ✅ Error recovery - retry individual events
+const failedEvents = [];
+for (const order of orders) {
+  try {
+    await OrderCreated.publish(order);
+  } catch (error) {
+    failedEvents.push(OrderCreated.create(order));
+  }
+}
+// Retry failed events later
+if (failedEvents.length > 0) {
+  await OrderCreated.publish(failedEvents);
+}
+
+// ✅ Testing - validate without sending
+const entry = OrderCreated.create({ orderId: "123", amount: 100 });
+expect(entry.Source).toBe("order-service");
+expect(entry.DetailType).toBe("order.created");
+// No AWS calls made
+```
+
+**Key difference:** `create()` returns a data structure you can store, pass around, and send later. `publish()` immediately sends to EventBridge.
+
+### 5. Multi-Bus Architecture
+
+EventKit supports multiple EventBridge buses - common in enterprise applications for isolation:
+
+```typescript
+// Different services with different buses
+const orderBus = new Bus({ name: "order-service-bus", EventBridge: orderClient });
+const paymentBus = new Bus({ name: "payment-service-bus", EventBridge: paymentClient });
+
+const OrderCreated = new Event({
+  name: "order.created",
+  source: "order-service",
+  bus: orderBus,  // Order events go to order bus
+  schema: OrderSchema,
+});
+
+const PaymentProcessed = new Event({
+  name: "payment.processed",
+  source: "payment-service",
+  bus: paymentBus,  // Payment events go to payment bus
+  schema: PaymentSchema,
+});
+
+// ✅ Each service publishes to its own bus
+await OrderCreated.publish([
+  OrderCreated.create({ orderId: "123" }),
+  OrderUpdated.create({ orderId: "123", status: "processing" }), // Same bus ✅
+]);
+
+await PaymentProcessed.publish([
+  PaymentProcessed.create({ paymentId: "PAY-456" }),
+  PaymentCompleted.create({ paymentId: "PAY-456" }), // Same bus ✅
+]);
+
+// ❌ This throws an error - different buses
+await OrderCreated.publish([
+  OrderCreated.create({ orderId: "123" }),
+  PaymentProcessed.create({ paymentId: "456" }), // Different bus - ERROR!
+]);
+```
+
+**Why separate buses?**
+- **Microservices** - Each service owns its bus for isolation
+- **Security** - PII on secure bus, analytics on regular bus
+- **Compliance** - HIPAA data separated from general events
+- **Team boundaries** - Different teams manage their own buses
+
+**Design philosophy:** Events from different buses should never be mixed in a single call. This enforces clean service boundaries and prevents accidental cross-service coupling.
+
+### 6. Cross-Workspace Event Usage
 
 The lazy bus pattern enables Events to be imported anywhere without AWS setup:
 
@@ -415,22 +533,19 @@ npx @divmode/eventkit sync-schemas --no-delete
 **`pattern(filter?)`** - Generate EventBridge pattern from your schema
 Returns EventBridge-compatible JSON pattern for creating rules
 
-**`publish(properties)`** - Convenience method for single event publishing
-Validates against schema, immediately sends to EventBridge, returns AWS response with EventId
+**`publish(data)`** - Universal publishing method (immediate sending)
+- `publish(eventData)` - Single event
+- `publish([data1, data2])` - Batch of same type
+- `publish([entry1, entry2])` - Mixed types from `create()` (must use same bus)
+Validates, sends to EventBridge immediately, returns AWS response
 
-**`create(properties)`** - Create event entry for batch publishing
-Validates against schema, returns PutEventsRequestEntry for use with `bus.put()`
-Use this for batching multiple events or conditional publishing
+**`create(properties)`** - Create event entry for deferred sending
+Validates against schema, returns PutEventsRequestEntry data structure
+Use for: conditional sending, transactions, error recovery, testing
+Does NOT send to EventBridge - use `publish()` to actually send
 
 **`Event.computePattern(events[], filter?)`** - Multi-event patterns
 Generate single pattern matching multiple event types
-
-### Bus Class
-
-**`bus.put(events[])`** - Batch publish events with automatic chunking
-Accepts array of PutEventsRequestEntry objects (from `event.create()`)
-Automatically handles AWS limits: 10 events per request, 256KB max size
-Sends chunks in parallel and merges results
 
 ### Type Helpers
 

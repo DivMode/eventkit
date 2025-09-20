@@ -146,7 +146,7 @@ export class Event<N extends string, S extends z.ZodType> {
     return this._name;
   }
 
-  get bus(): Bus {
+  private get bus(): Bus {
     if (!this._resolvedBus) {
       this._resolvedBus = typeof this._bus === 'function' ? this._bus() : this._bus;
     }
@@ -158,18 +158,61 @@ export class Event<N extends string, S extends z.ZodType> {
    */
   create(properties: z.infer<S>): PutEventsRequestEntry {
     const validated = this._schema.parse(properties);
-    return {
+    const entry = {
       Source: this._source,
       DetailType: this._name,
       Detail: JSON.stringify({ properties: validated }),
     };
+
+    // Attach bus reference for multi-bus support (hidden property)
+    Object.defineProperty(entry, '__bus', {
+      value: this.bus,
+      enumerable: false,   // Won't show in JSON.stringify
+      writable: false,
+      configurable: false
+    });
+
+    return entry;
   }
 
   /**
-   * Publish event to EventBridge
+   * Publish event(s) to EventBridge
+   * Supports single event, array of events, or mixed event types with automatic multi-bus routing
    */
-  async publish(properties: z.infer<S>): Promise<PutEventsResponse> {
-    return this.bus.put([this.create(properties)]);
+  async publish(data: z.infer<S> | z.infer<S>[] | PutEventsRequestEntry[]): Promise<PutEventsResponse> {
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        throw new Error("Cannot publish empty events array");
+      }
+
+      // Check if it's an array of PutEventsRequestEntry (mixed types)
+      if (isPutEventsRequestEntry(data[0])) {
+        const entries = data as PutEventsRequestEntry[];
+
+        // Verify all entries use the same bus
+        const firstBus = getBusFromEntry(entries[0]) || this.bus;
+
+        for (const entry of entries) {
+          const entryBus = getBusFromEntry(entry) || this.bus;
+          if (entryBus !== firstBus) {
+            throw new Error(
+              "Cannot publish events from different buses in single call. " +
+              "Use separate publish() calls per bus for better isolation and clarity."
+            );
+          }
+        }
+
+        // All entries use same bus - proceed normally
+        return firstBus.put(entries);
+      } else {
+        // Array of same event type
+        const entries = data.map(props => this.create(props));
+        return this.bus.put(entries);
+      }
+    } else {
+      // Single event publishing
+      return this.bus.put([this.create(data)]);
+    }
   }
 
   /**
@@ -211,7 +254,31 @@ export class Event<N extends string, S extends z.ZodType> {
       detail: { properties: filter }
     } : basePattern;
   }
+
 }
+
+// =============================================================================
+// Internal Utilities
+// =============================================================================
+
+/**
+ * Type guard to check if value is a PutEventsRequestEntry
+ */
+function isPutEventsRequestEntry(value: any): value is PutEventsRequestEntry {
+  return value &&
+    typeof value === 'object' &&
+    typeof value.Source === 'string' &&
+    typeof value.DetailType === 'string' &&
+    (value.Detail === undefined || typeof value.Detail === 'string');
+}
+
+/**
+ * Extract bus from a PutEventsRequestEntry created by Event.create()
+ */
+function getBusFromEntry(entry: PutEventsRequestEntry): Bus | undefined {
+  return (entry as any).__bus;
+}
+
 
 // =============================================================================
 // Type Helpers for External Use
