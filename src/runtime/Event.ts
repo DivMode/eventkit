@@ -186,11 +186,13 @@ export class Event<N extends string, S extends z.ZodType> {
       }
 
       // Check if it's an array of PutEventsRequestEntry (mixed types)
-      if (isPutEventsRequestEntry(data[0])) {
+      const firstItem = data[0];
+      if (isPutEventsRequestEntry(firstItem)) {
+        // TypeScript now knows this is PutEventsRequestEntry[]
         const entries = data as PutEventsRequestEntry[];
 
         // Verify all entries use the same bus
-        const firstBus = getBusFromEntry(entries[0]) || this.bus;
+        const firstBus = getBusFromEntry(firstItem) || this.bus;
 
         for (const entry of entries) {
           const entryBus = getBusFromEntry(entry) || this.bus;
@@ -204,11 +206,13 @@ export class Event<N extends string, S extends z.ZodType> {
 
         // All entries use same bus - proceed normally
         return firstBus.put(entries);
-      } else {
-        // Array of same event type
-        const entries = data.map(props => this.create(props));
-        return this.bus.put(entries);
       }
+
+      // If we reach here, TypeScript should know it's z.infer<S>[]
+      // But we'll be explicit to help the compiler
+      const schemaEntries = data.filter((item): item is z.infer<S> => !isPutEventsRequestEntry(item));
+      const entries = schemaEntries.map(props => this.create(props));
+      return this.bus.put(entries);
     } else {
       // Single event publishing
       return this.bus.put([this.create(data)]);
