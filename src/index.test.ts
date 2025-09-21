@@ -9,7 +9,6 @@ describe("EventKit exports", () => {
     expect(exports.Bus).toBeDefined();
 
     // Factory functions
-    expect(exports.createEventBus).toBeDefined();
     expect(exports.createEventHandler).toBeDefined();
 
     // Type exports should be importable (compile-time check)

@@ -2,19 +2,27 @@
  * EventKit Runtime Event Publishing
  *
  * Clean, explicit event publishing with built-in type safety.
- * No runtime initialization required - just import and use.
+ * You control the EventBridge client configuration.
  *
  * @example
  * ```typescript
  * import { Event, Bus } from "@divmode/eventkit/runtime";
+ * import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
  * import { Resource } from "sst";
  *
- * const bus = new Bus({ name: Resource.Bus.name });
+ * // YOU control the client configuration
+ * const eventBridgeClient = new EventBridgeClient({
+ *   region: "us-east-1",
+ *   // any config you want
+ * });
  *
  * const OrderCreated = new Event({
  *   name: "order.created",
  *   source: "order-service",
- *   bus,
+ *   bus: () => new Bus({
+ *     name: Resource.Bus.name,
+ *     EventBridge: eventBridgeClient
+ *   }),
  *   schema: z.object({ orderId: z.string() })
  * });
  *
@@ -24,7 +32,6 @@
  */
 
 export { Bus } from "./Bus";
-export { createEventBus } from "./createEventBus";
 export { createEventHandler } from "./createEventHandler";
 export type {
   AnythingButOperator,

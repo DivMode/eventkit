@@ -7,7 +7,6 @@
  *
  * Prerequisites:
  * 1. Set environment variables:
- *    - EVENTKIT_BUS_NAME="your-event-bus-name"
  *    - AWS_REGION="us-east-1" (optional)
  *    - AWS credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or IAM role)
  *
@@ -15,18 +14,28 @@
  *    npm install eventkit zod @aws-sdk/client-eventbridge
  */
 
+import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import { z } from "zod";
-import { createEventBus, Event } from "../src/runtime/index.js";
+import { Bus, Event } from "../src/runtime/index.js";
+
+// YOU control the EventBridge client configuration
+const eventBridgeClient = new EventBridgeClient({
+  region: process.env.AWS_REGION || "us-east-1",
+  // Add any configuration you need
+});
 
 // =============================================================================
 // Event Definitions
 // =============================================================================
 
-// Define your events with full type safety
+// Define your events with explicit bus configuration
 export const OrderCreated = new Event({
   name: "order.created",
   source: "ecommerce-api",
-  bus: createEventBus, // Lazy initialization - only created when publishing
+  bus: () => new Bus({
+    name: "order-events-bus", // Explicitly specify your bus name
+    EventBridge: eventBridgeClient,
+  }),
   schema: z.object({
     orderId: z.string(),
     customerId: z.string(),
@@ -46,7 +55,10 @@ export const OrderCreated = new Event({
 export const PaymentProcessed = new Event({
   name: "payment.processed",
   source: "payment-service",
-  bus: createEventBus,
+  bus: () => new Bus({
+    name: "payment-events-bus", // Different bus for payment events
+    EventBridge: eventBridgeClient,
+  }),
   schema: z.object({
     paymentId: z.string(),
     orderId: z.string(),
@@ -89,7 +101,7 @@ export const criticalEventsPattern = Event.computePattern(
 
 async function publishOrderExample() {
   try {
-    // This will use EVENTKIT_BUS_NAME from environment
+    // Uses explicit bus configuration
     const response = await OrderCreated.publish({
       orderId: "ORDER-123",
       customerId: "CUSTOMER-456",
@@ -177,15 +189,10 @@ async function main() {
     console.error("Invalid order data:", error);
   }
 
-  // 3. Event publishing (requires EVENTKIT_BUS_NAME)
+  // 3. Event publishing (uses explicit bus configuration)
   console.log("\n3. Event Publishing:");
-  if (process.env.EVENTKIT_BUS_NAME) {
-    await publishOrderExample();
-    await publishPaymentExample();
-  } else {
-    console.log("Skipping - EVENTKIT_BUS_NAME not configured");
-    console.log("Set EVENTKIT_BUS_NAME to enable publishing");
-  }
+  await publishOrderExample();
+  await publishPaymentExample();
 }
 
 // Run example if this file is executed directly

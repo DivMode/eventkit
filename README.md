@@ -30,55 +30,92 @@ bun add @divmode/eventkit zod
 
 ## ⚙️ Configuration
 
-EventKit works in two modes:
+EventKit gives you full control over EventBridge client configuration:
 
-### 🏗️ SST Context (Monorepo)
-In SST projects, EventKit automatically uses your configured EventBridge bus:
+### 🏗️ SST Projects
 ```typescript
-// No additional configuration needed - uses Resource.Bus
-const OrderCreated = new Event({ bus: createEventBus, ... });
+import { Bus, Event } from "@divmode/eventkit/runtime";
+import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
+import { Resource } from "sst";
+
+// YOU control the client configuration
+const eventBridgeClient = new EventBridgeClient({
+  region: process.env.AWS_REGION || "us-east-1",
+  // Add any configuration you need
+});
+
+const OrderCreated = new Event({
+  name: "order.created",
+  source: "order-service",
+  bus: () => new Bus({
+    name: Resource.Bus.name, // SST Resource
+    EventBridge: eventBridgeClient,
+  }),
+  schema: z.object({ orderId: z.string() }),
+});
 ```
 
-### 🌍 Standalone Context (npm package)
-When using EventKit as a standalone package, configure via environment variables:
+### 🌍 Standalone Usage
+```typescript
+import { Bus, Event } from "@divmode/eventkit/runtime";
+import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 
-```bash
-# Required for event publishing
-export EVENTKIT_BUS_NAME="my-event-bus"
+// YOU control the client configuration
+const eventBridgeClient = new EventBridgeClient({
+  region: "us-east-1",
+  maxAttempts: 3,
+  // Any AWS SDK config
+});
 
-# Optional - AWS region (defaults to AWS SDK defaults)
-export AWS_REGION="us-east-1"
-
-# AWS credentials (choose one method):
-
-# Method 1: Environment variables
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-
-# Method 2: AWS Profile
-export AWS_PROFILE="your-profile-name"
-
-# Method 3: IAM Role (automatic in AWS environments)
-# No additional config needed when running on EC2, Lambda, ECS
-
-# Method 4: Shared credentials file (~/.aws/credentials)
-# Automatically detected by AWS SDK
+const OrderCreated = new Event({
+  name: "order.created",
+  source: "order-service",
+  bus: () => new Bus({
+    name: "my-event-bus", // Explicit bus name
+    EventBridge: eventBridgeClient,
+  }),
+  schema: z.object({ orderId: z.string() }),
+});
 ```
 
-**📋 Note**: Pattern generation and type safety work without any configuration. Environment variables are only needed when actually publishing events to EventBridge.
+### 🔧 Multiple Buses
+```typescript
+// Different clients for different buses
+const mainBusClient = new EventBridgeClient({ region: "us-east-1" });
+const analyticsBusClient = new EventBridgeClient({ region: "eu-west-1" });
+
+const OrderCreated = new Event({
+  bus: () => new Bus({ name: "main-bus", EventBridge: mainBusClient }),
+  // ...
+});
+
+const UserActivity = new Event({
+  bus: () => new Bus({ name: "analytics-bus", EventBridge: analyticsBusClient }),
+  // ...
+});
+```
+
+**📋 Note**: Pattern generation and type safety work without any configuration. Bus configuration is only needed when publishing events.
 
 ## 🚀 Quick Start
 
 ### 1. Define Events
 
 ```typescript
-import { Event, createEventBus } from "@divmode/eventkit/runtime";
+import { Bus, Event } from "@divmode/eventkit/runtime";
+import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 import { z } from "zod";
+
+// YOU control the client
+const eventBridgeClient = new EventBridgeClient();
 
 const OrderCreated = new Event({
   name: "order.created",
   source: "order-service",
-  bus: createEventBus, // 👈 Lazy factory - bus only created when publishing
+  bus: () => new Bus({
+    name: "my-event-bus",
+    EventBridge: eventBridgeClient,
+  }),
   schema: z.object({
     orderId: z.string(),
     amount: z.number(),
@@ -86,7 +123,7 @@ const OrderCreated = new Event({
   }),
 });
 
-// The lazy pattern enables powerful cross-workspace usage:
+// Benefits of explicit configuration:
 
 // ✅ In workers/functions - validate incoming events
 const parsed = OrderCreated.schema.parse(event.detail.properties);
@@ -97,12 +134,12 @@ const pattern = OrderCreated.pattern({ amount: [{ numeric: [">", 100] }] });
 // ✅ In type definitions - extract types
 type OrderData = z.infer<typeof OrderCreated.schema>;
 
-// ✅ Only when publishing is the bus needed (requires config)
+// ✅ Full control over publishing configuration
 await OrderCreated.publish({
   orderId: "ORDER-123",
   amount: 1500,
   customerTier: "premium"
-}); // Bus created here - needs EVENTKIT_BUS_NAME or SST context
+});
 ```
 
 ### 2. Generate Type-Safe Patterns
