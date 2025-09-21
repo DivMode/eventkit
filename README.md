@@ -93,6 +93,7 @@ const OrderCreated = new Event({
 });
 ```
 
+
 ### 2. Generate Type-Safe Patterns
 
 ```typescript
@@ -130,6 +131,27 @@ type OrderData = z.infer<typeof OrderCreated.schema>;
 
 // Validate incoming events
 const parsed = OrderCreated.schema.parse(event.detail.properties);
+```
+
+### ⚠️ EventBridge Rules → HTTP API Destinations
+
+When EventBridge rules send to HTTP destinations (Cloudflare Queue, webhooks), `schema.parse()` fails with `"expected number, received string"` because HTTP serialization converts numbers to strings. Use `z.coerce.number()`:
+
+```typescript
+// ✅ CORRECT - Use z.coerce.number() for HTTP destinations
+const OrderCreated = new Event({
+  schema: z.object({
+    amount: z.coerce.number(),    // Handles "1500" → 1500
+    timestamp: z.coerce.number(), // HTTP serialization safe
+  }),
+});
+
+// ❌ WRONG - Will fail in consumer
+const BadEvent = new Event({
+  schema: z.object({
+    amount: z.number(),  // 💥 Gets "1500" string, expects number
+  }),
+});
 ```
 
 ## ⚙️ Configuration
@@ -193,6 +215,7 @@ const UserActivity = new Event({ bus: analyticsBus, /* ... */ });
 ### Type-Safe Publishing
 
 EventKit provides complete type safety for event publishing with full IntelliSense support and compile-time validation.
+
 
 ```typescript
 // Single event - fully typed and validated
