@@ -190,21 +190,31 @@ const UserActivity = new Event({ bus: analyticsBus, /* ... */ });
 
 ## 🚀 Publishing Events
 
-### Basic Publishing
+### Type-Safe Publishing
+
+EventKit provides complete type safety for event publishing with full IntelliSense support and compile-time validation.
 
 ```typescript
-// Single event
+// Single event - fully typed and validated
 await OrderCreated.publish({
-  orderId: "ORDER-123",
-  amount: 1500,
-  customerTier: "premium"
+  orderId: "ORDER-123",    // ✅ TypeScript enforces string type
+  amount: 1500,            // ✅ TypeScript enforces number type
+  customerTier: "premium"  // ✅ TypeScript enforces enum values
+});
+
+// ❌ TypeScript errors - caught at compile time
+await OrderCreated.publish({
+  orderId: 123,            // ❌ Error: Type 'number' is not assignable to type 'string'
+  amount: "1500",          // ❌ Error: Type 'string' is not assignable to type 'number'
+  customerTier: "gold",    // ❌ Error: Argument not assignable to parameter of type '"basic" | "premium" | "enterprise"'
+  invalidField: "value"    // ❌ Error: Object literal may only specify known properties
 });
 
 // Batch events (automatically chunked and optimized)
 await OrderCreated.publish([
-  { orderId: "1", amount: 100, customerTier: "basic" },
-  { orderId: "2", amount: 200, customerTier: "premium" },
-  { orderId: "3", amount: 300, customerTier: "enterprise" },
+  { orderId: "1", amount: 100, customerTier: "basic" },      // ✅ All types validated
+  { orderId: "2", amount: 200, customerTier: "premium" },    // ✅ IntelliSense autocomplete
+  { orderId: "3", amount: 300, customerTier: "enterprise" }, // ✅ Enum validation
 ]);
 ```
 
@@ -396,24 +406,99 @@ export const handler = createEventHandler(
 
 ### SST Integration
 
-EventKit includes special helpers for [SST](https://sst.dev) projects:
+EventKit includes special infrastructure helpers for [SST](https://sst.dev) projects that provide seamless integration with SST's resource system and type-safe infrastructure-as-code patterns.
+
+#### Why SST Integration?
+
+- **🔗 Resource Wiring** - Automatically connect EventBridge rules to SST resources
+- **🏗️ Infrastructure as Code** - Define event rules alongside your application code
+- **🎯 Type Safety** - Full TypeScript support for event filtering and transformations
+- **⚡ Zero Configuration** - Works with SST's resource discovery out of the box
+- **🔄 Hot Reloading** - Infrastructure changes update during development
+
+#### Creating Event Rules
 
 ```typescript
 import { createEventRule } from "@divmode/eventkit/sst";
+import { OrderCreated, OrderUpdated } from "./events";
 
-createEventRule(OrderCreated, {
+// Single event rule with type-safe filtering
+const highValueOrderRule = createEventRule(OrderCreated, {
   name: "ProcessHighValueOrders",
-  bus: myEventBus,
-  filter: { amount: [{ numeric: [">", 1000] }] },
+  bus: myEventBus,                    // SST Bus resource
+  filter: {
+    amount: [{ numeric: [">", 1000] }],        // ✅ Fully typed filters
+    customerTier: ["premium", "enterprise"]    // ✅ Enum validation
+  },
   target: {
-    destination: processingQueue,
+    destination: processingQueue,     // SST Queue resource
     transform: (event) => ({
-      orderId: event.orderId, // ✅ Fully typed
-      amount: event.amount,
+      orderId: event.orderId,         // ✅ Full type safety
+      amount: event.amount,           // ✅ IntelliSense support
+      priority: "high"                // ✅ Add custom fields
     }),
   },
 });
+
+// Multi-event rule
+const orderProcessingRule = createEventRule([OrderCreated, OrderUpdated], {
+  name: "OrderWorkflow",
+  bus: myEventBus,
+  filter: {
+    $or: [
+      { status: ["pending"] },
+      { amount: [{ numeric: [">", 500] }] }
+    ]
+  },
+  target: {
+    destination: workflowFunction,    // SST Function resource
+    // Transform is optional - sends full event by default
+  },
+});
 ```
+
+#### Advanced SST Patterns
+
+**Multiple Targets per Rule**
+```typescript
+createEventRule(OrderCreated, {
+  name: "OrderCreatedFanout",
+  bus: orderBus,
+  filter: { customerTier: ["enterprise"] },
+  targets: [
+    {
+      destination: analyticsQueue,
+      transform: (event) => ({ customerId: event.customerId, amount: event.amount })
+    },
+    {
+      destination: notificationService,
+      transform: (event) => ({ orderId: event.orderId, email: event.customerEmail })
+    },
+    {
+      destination: auditFunction,
+      // Send full event without transformation
+    }
+  ]
+});
+```
+
+**Cross-Stack Event Rules**
+```typescript
+// In your infrastructure stack
+export const orderBus = new sst.aws.Bus("OrderBus");
+export const processingQueue = new sst.aws.Queue("ProcessingQueue");
+
+// In your application stack
+createEventRule(OrderCreated, {
+  name: "CrossStackRule",
+  bus: orderBus,              // Reference from infrastructure stack
+  filter: { amount: [{ numeric: [">", 10000] }] },
+  target: {
+    destination: processingQueue,  // Reference from infrastructure stack
+  }
+});
+```
+**Note:** SST integration requires SST v3+ and works seamlessly with EventKit's standalone usage patterns.
 
 ## 🔧 CLI Tools
 
