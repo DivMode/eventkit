@@ -95,6 +95,23 @@ export type EventFilter<S extends z.ZodType> = {
 };
 
 // =============================================================================
+// Exact Type Helpers
+// =============================================================================
+
+/**
+ * Helper type to make extra properties impossible
+ */
+type Impossible<K extends keyof any> = {
+  [P in K]: never;
+};
+
+/**
+ * Enforces exact type matching - no extra properties allowed
+ * This approach gives the best error messages TypeScript can provide
+ */
+type NoExtraProperties<T, U extends T = T> = U & Impossible<Exclude<keyof U, keyof T>>;
+
+// =============================================================================
 // Event Class
 // =============================================================================
 
@@ -178,8 +195,11 @@ export class Event<N extends string, S extends z.ZodType> {
   /**
    * Publish event(s) to EventBridge
    * Supports single event, array of events, or mixed event types with automatic multi-bus routing
+   * Enforces strict type checking to prevent extra properties
    */
-  async publish(data: z.infer<S> | z.infer<S>[] | PutEventsRequestEntry[]): Promise<PutEventsResponse> {
+  async publish<U extends z.infer<S>>(
+    data: NoExtraProperties<z.infer<S>, U> | NoExtraProperties<z.infer<S>, U>[] | PutEventsRequestEntry[]
+  ): Promise<PutEventsResponse> {
     if (Array.isArray(data)) {
       if (data.length === 0) {
         throw new Error("Cannot publish empty events array");
@@ -210,12 +230,12 @@ export class Event<N extends string, S extends z.ZodType> {
 
       // If we reach here, TypeScript should know it's z.infer<S>[]
       // But we'll be explicit to help the compiler
-      const schemaEntries = data.filter((item): item is z.infer<S> => !isPutEventsRequestEntry(item));
+      const schemaEntries = data.filter(item => !isPutEventsRequestEntry(item)) as z.infer<S>[];
       const entries = schemaEntries.map(props => this.create(props));
       return this.bus.put(entries);
     } else {
-      // Single event publishing
-      return this.bus.put([this.create(data)]);
+      // Single event publishing - cast to z.infer<S> for internal use
+      return this.bus.put([this.create(data as z.infer<S>)]);
     }
   }
 
