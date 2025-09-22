@@ -6,6 +6,16 @@ on:
     paths:
       - 'package.json'
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (leave empty for auto)"
+        required: false
+        type: string
+      snapshot:
+        description: "Publish as snapshot"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   release:
@@ -17,15 +27,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache ~/.bun
+        id: cache-bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
         run: bun install
@@ -39,12 +56,38 @@ jobs:
       - name: Get package version
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          # Use manual version if provided, otherwise use package.json
+          if [ "${{ inputs.version }}" != "" ]; then
+            VERSION="${{ inputs.version }}"
+            echo "Using manual version: $VERSION"
+          elif [ "${{ inputs.snapshot }}" == "true" ]; then
+            VERSION="0.0.0-$(date +%Y%m%d%H%M%S)"
+            echo "Using snapshot version: $VERSION"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            echo "Using package.json version: $VERSION"
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check if version exists on npm
+        id: npm_check
+        run: |
+          NPM_VERSION=$(bun pm ls @divmode/eventkit --all 2>/dev/null | grep @divmode/eventkit@ | head -1 | sed 's/.*@//' || echo "0.0.0")
+          CURRENT_VERSION="${{ steps.version.outputs.version }}"
+
+          if [ "$NPM_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "publish_needed=true" >> $GITHUB_OUTPUT
+            echo "Package version $CURRENT_VERSION is new (npm has $NPM_VERSION)"
+          else
+            echo "publish_needed=false" >> $GITHUB_OUTPUT
+            echo "Package version $CURRENT_VERSION already exists on npm"
+          fi
+
       - name: Check if release exists
         id: release_exists
+        if: steps.npm_check.outputs.publish_needed == 'true' && inputs.snapshot != true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -54,17 +97,49 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Update package.json version if needed
+        if: steps.npm_check.outputs.publish_needed == 'true' && (inputs.version != '' || inputs.snapshot == true)
+        run: |
+          # Update version in package.json if using manual or snapshot version
+          bun run -c "const pkg = require('./package.json'); pkg.version = '${{ steps.version.outputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
+
+      - name: Publish to npm
+        if: steps.npm_check.outputs.publish_needed == 'true'
+        run: |
+          if [ "${{ inputs.snapshot }}" == "true" ]; then
+            bun publish --access public --tag snapshot
+          else
+            bun publish --access public --tag latest
+          fi
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create GitHub release
-        if: steps.release_exists.outputs.exists == 'false'
+        if: steps.npm_check.outputs.publish_needed == 'true' && steps.release_exists.outputs.exists == 'false' && inputs.snapshot != true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Get previous release tag
+          PREVIOUS_TAG=$(gh release list --limit 1 --json tagName -q '.[0].tagName' || echo "")
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            # Generate filtered release notes
+            COMMITS=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD -- packages/eventkit/ | \
+              grep -v -i "^- release:" | \
+              grep -v -i "^- ignore:" | \
+              grep -v -i "^- chore:" | \
+              grep -v -i "^- ci:" | \
+              grep -v -i "^- docs:" | \
+              grep -v -i "^- doc:" | \
+              grep -v -i "^- wip:" || echo "")
+
+            if [ -z "$COMMITS" ]; then
+              COMMITS="No notable changes"
+            fi
+          else
+            COMMITS="Initial release"
+          fi
+
           gh release create ${{ steps.version.outputs.tag }} \
             --title "EventKit v${{ steps.version.outputs.version }}" \
-            --notes "Auto-generated release for EventKit v${{ steps.version.outputs.version }}"
-
-      - name: Publish to npm
-        if: steps.release_exists.outputs.exists == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access=public
+            --notes "$COMMITS"
