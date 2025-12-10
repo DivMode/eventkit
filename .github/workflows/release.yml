@@ -109,6 +109,12 @@ jobs:
           node-version: '22'
           # NO registry-url - it sets NODE_AUTH_TOKEN which blocks OIDC
 
+      - name: Install latest npm for OIDC support
+        run: npm install -g npm@latest
+
+      - name: Debug npm version
+        run: npm --version
+
       - name: Publish to npm (OIDC)
         if: steps.npm_check.outputs.publish_needed == 'true'
         run: |
