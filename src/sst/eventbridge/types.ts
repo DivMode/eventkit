@@ -22,11 +22,40 @@ export interface EventBridgeDestination {
 
 /**
  * HTTP target configuration for API destinations
+ *
+ * queryStringParameters accepts either:
+ * - string: Field name in event schema (auto-generates JSON path mappings)
+ * - Record<string, string>: Explicit JSON path mappings { key: "$.detail.path" }
+ *
+ * ⚠️ NOTE: EventBridge sends ALL mapped query params, even when values don't exist.
+ * AWS returns empty string for missing JSON paths: `?foo=&bar=&actualParam=value`
+ *
+ * Solutions:
+ * 1. Filter empty params on receiving end: `{k: v for k, v in params.items() if v}`
+ * 2. Use `transform` to put params in body instead
+ *
+ * @example
+ * ```typescript
+ * httpTarget: {
+ *   queryStringParameters: "params",  // Auto-resolved from schema
+ * }
+ *
+ * // Or explicit mappings
+ * httpTarget: {
+ *   queryStringParameters: {
+ *     id: "$.detail.id",
+ *     status: "$.detail.status",
+ *   },
+ * }
+ *
+ * // Or use transform to put params in body
+ * transform: (event) => ({ params: event.params }),
+ * ```
  */
 export interface HttpTargetConfig {
   headerParameters?: Record<string, string>;
   pathParameterValues?: string[];
-  queryStringParameters?: Record<string, string>;
+  queryStringParameters?: string | Record<string, string>;
 }
 
 /**

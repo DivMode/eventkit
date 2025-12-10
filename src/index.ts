@@ -37,3 +37,5 @@
 export type { FilterFor, SchemaFor } from "./runtime/Event";
 // Re-export all runtime functionality as the main API
 export * from "./runtime/index";
+// Export utility functions for infrastructure tools
+export { schemaToJsonPaths } from "./utils/schemaToJsonPaths";

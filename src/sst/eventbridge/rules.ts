@@ -9,6 +9,7 @@ import {
   DEFAULT_RETRY_POLICY,
 } from "./constants";
 import { createTransform } from "./transform";
+import { schemaToJsonPaths } from "../../utils/schemaToJsonPaths";
 import type {
   EventBridgeDestination,
   EventRuleConfig,
@@ -88,6 +89,76 @@ function createEventPattern<E extends Event<string, z.ZodType>>(
 }
 
 /**
+ * Check if a value is a Zod schema (has shape property)
+ */
+function isZodSchema(value: unknown): value is z.ZodObject<z.ZodRawShape> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "shape" in value &&
+    typeof (value as Record<string, unknown>).shape === "object"
+  );
+}
+
+/**
+ * Resolve queryStringParameters from field name string or explicit mappings
+ * When given a field name string, looks up the schema from the event and generates JSON paths
+ *
+ * ⚠️ NOTE: EventBridge sends ALL mapped query params, even when values don't exist.
+ * AWS returns empty string for missing JSON paths: `?foo=&bar=&actualParam=value`
+ *
+ * Solutions:
+ * 1. Filter empty params on receiving end: `{k: v for k, v in params.items() if v}`
+ * 2. Use `transform` to put params in body instead
+ *
+ * @param config - Field name string or explicit Record<string, string> mappings
+ * @param event - Event to look up schema from when config is a field name
+ * @returns EventBridge-compatible JSON path mappings
+ *
+ * @example
+ * ```typescript
+ * // Field name - auto-resolved from event schema
+ * resolveQueryStringParameters("params", MyEvent)
+ * // Result: { page: "$.detail.params.page", limit: "$.detail.params.limit" }
+ *
+ * // Explicit mappings - returned as-is
+ * resolveQueryStringParameters({ id: "$.detail.id" }, MyEvent)
+ * // Result: { id: "$.detail.id" }
+ * ```
+ */
+function resolveQueryStringParameters<E extends Event<string, z.ZodType>>(
+  config: string | Record<string, string> | undefined,
+  event: E,
+): Record<string, string> | undefined {
+  if (!config) return undefined;
+
+  // If already explicit mappings, return as-is
+  if (typeof config !== "string") {
+    return config;
+  }
+
+  // It's a field name string - look up schema from event
+  const fieldName = config;
+  const eventSchema = event.schema;
+
+  if (!isZodSchema(eventSchema)) {
+    throw new Error("Event schema must be a z.object()");
+  }
+
+  const fieldSchema = (eventSchema.shape as Record<string, z.ZodType>)[
+    fieldName
+  ];
+
+  if (!fieldSchema || !isZodSchema(fieldSchema)) {
+    throw new Error(
+      `Field "${fieldName}" not found in event schema or is not a z.object()`,
+    );
+  }
+
+  return schemaToJsonPaths(fieldSchema, fieldName);
+}
+
+/**
  * Create EventBridge target with smart defaults
  */
 function createRuleTarget<E extends Event<string, z.ZodType>>(
@@ -102,11 +173,22 @@ function createRuleTarget<E extends Event<string, z.ZodType>>(
   const target = config.target;
   const arnType = getArnType(target.destination.arn);
 
+  // Resolve queryStringParameters if it's a Zod schema
+  const resolvedHttpTarget = target.httpTarget
+    ? {
+        ...target.httpTarget,
+        queryStringParameters: resolveQueryStringParameters(
+          target.httpTarget.queryStringParameters,
+          firstEvent,
+        ),
+      }
+    : undefined;
+
   // Apply smart defaults for API destinations
   const httpTarget =
     arnType === "api"
-      ? target.httpTarget || DEFAULT_API_HTTP_TARGET
-      : target.httpTarget;
+      ? resolvedHttpTarget || DEFAULT_API_HTTP_TARGET
+      : resolvedHttpTarget;
 
   return new aws.cloudwatch.EventTarget(`${config.name}Target`, {
     rule: rule.name,

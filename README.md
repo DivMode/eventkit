@@ -19,6 +19,7 @@ Generate type-safe AWS EventBridge patterns with zero runtime overhead. Transfor
 - [Publishing Events](#-publishing-events)
 - [Pattern Generation](#-pattern-generation)
 - [Advanced Usage](#-advanced-usage)
+- [Utility Functions](#-utility-functions)
 - [CLI Tools](#-cli-tools)
 - [API Reference](#-api-reference)
 - [Examples](#-examples)
@@ -522,6 +523,131 @@ createEventRule(OrderCreated, {
 });
 ```
 **Note:** SST integration requires SST v3+ and works seamlessly with EventKit's standalone usage patterns.
+
+## 🔧 EventBridge Query String Parameters
+
+Pass event data as URL query parameters to EventBridge API destinations.
+
+### ⚠️ Important: AWS Sends Empty Strings for Missing Values
+
+EventBridge sends ALL mapped query parameters, even when values don't exist. Missing JSON paths become empty strings:
+
+```
+// Event has: { params: { page: 1, limit: 10 } }
+// EventBridge sends: ?query=&page=1&limit=10  (empty query param included)
+```
+
+**Your receiving endpoint MUST filter empty params:**
+
+```python
+# Python (FastAPI)
+params = {k: v for k, v in request.query_params.items() if v}
+```
+
+```typescript
+// JavaScript/TypeScript
+const params = Object.fromEntries(
+  Object.entries(req.query).filter(([_, v]) => v)
+);
+```
+
+### Complete Example
+
+**Step 1: Define Event with params schema**
+```typescript
+import { Event, Bus } from "@divmode/eventkit/runtime";
+import { z } from "zod";
+
+const SearchParams = z.object({
+  query: z.string().optional(),
+  page: z.coerce.number().optional(),
+  limit: z.coerce.number().optional(),
+});
+
+const SearchRequested = new Event({
+  name: "search.requested",
+  source: "my-service",
+  bus: () => new Bus({ name: "my-bus", EventBridge: client }),
+  schema: z.object({
+    params: SearchParams,
+    timestamp: z.number(),
+  }),
+});
+```
+
+**Step 2: Create EventBridge rule (SST)**
+```typescript
+import { createEventRule } from "@divmode/eventkit/sst";
+
+createEventRule(SearchRequested, {
+  name: "SearchRule",
+  bus: myBus,
+  target: {
+    destination: apiDestination,
+    roleArn: role.arn,
+    httpTarget: {
+      // "params" = field name in schema, auto-generates JSON path mappings
+      queryStringParameters: "params",
+    },
+  },
+});
+```
+
+**Step 3: Filter empty params in your endpoint**
+```python
+# Python (FastAPI)
+@app.get("/search")
+async def search(request: Request):
+    # Filter out empty string values from EventBridge
+    params = {k: v for k, v in request.query_params.items() if v}
+    # Result: { "page": "1", "limit": "10" }
+```
+
+### Alternative: Put Params in Body
+
+If you don't want to deal with empty query params, use `transform` to send params in the request body instead:
+
+```typescript
+createEventRule(MyEvent, {
+  target: {
+    transform: (event) => ({
+      params: event.params,  // Only actual values, no empty strings
+    }),
+  },
+});
+```
+
+### schemaToJsonPaths Utility
+
+For CDK, Terraform, or manual configurations, use `schemaToJsonPaths` to generate the mappings:
+
+```typescript
+import { schemaToJsonPaths } from "@divmode/eventkit";
+
+const QueryParams = z.object({
+  page: z.number(),
+  limit: z.number(),
+  search: z.string().optional(),
+});
+
+schemaToJsonPaths(QueryParams, "params");
+// Result: {
+//   page: "$.detail.params.page",
+//   limit: "$.detail.params.limit",
+//   search: "$.detail.params.search"
+// }
+```
+
+**AWS CDK example:**
+```typescript
+new Rule(this, "MyRule", {
+  targets: [new ApiDestination(dest, {
+    httpParameters: {
+      queryStringParameters: schemaToJsonPaths(MySchema, "params"),
+    },
+  })],
+});
+```
 
 ## 🔧 CLI Tools
 

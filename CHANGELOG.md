@@ -5,6 +5,17 @@ All notable changes to EventKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-09
+
+### Added
+- `queryStringParameters` schema auto-resolution - pass field name string to auto-generate JSON path mappings from event schema
+- `schemaToJsonPaths` utility function for CDK, Terraform, and manual configurations
+- Complete documentation for EventBridge query string parameters with examples
+
+### Fixed
+- Documented AWS limitation where EventBridge sends empty strings for missing JSON path values
+- Added filter solution for receiving endpoints to handle empty query params
+
 ## [Unreleased]
 
 ### Added
