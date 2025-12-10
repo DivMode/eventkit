@@ -106,8 +106,8 @@ jobs:
       - name: Setup Node.js for npm OIDC
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '22'
+          # NO registry-url - it sets NODE_AUTH_TOKEN which blocks OIDC
 
       - name: Publish to npm (OIDC)
         if: steps.npm_check.outputs.publish_needed == 'true'
@@ -117,6 +117,8 @@ jobs:
           else
             npm publish --access public --tag latest
           fi
+        env:
+          NODE_AUTH_TOKEN: ''  # Clear to allow OIDC
 
       - name: Create GitHub release
         if: steps.npm_check.outputs.publish_needed == 'true' && steps.release_exists.outputs.exists == 'false' && inputs.snapshot != true
