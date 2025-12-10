@@ -103,13 +103,19 @@ jobs:
           # Update version in package.json if using manual or snapshot version
           bun run -c "const pkg = require('./package.json'); pkg.version = '${{ steps.version.outputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
 
+      - name: Setup Node.js for npm OIDC
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Publish to npm (OIDC)
         if: steps.npm_check.outputs.publish_needed == 'true'
         run: |
           if [ "${{ inputs.snapshot }}" == "true" ]; then
-            bun publish --access public --tag snapshot
+            npm publish --access public --tag snapshot
           else
-            bun publish --access public --tag latest
+            npm publish --access public --tag latest
           fi
 
       - name: Create GitHub release
