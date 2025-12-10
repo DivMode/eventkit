@@ -103,7 +103,7 @@ jobs:
           # Update version in package.json if using manual or snapshot version
           bun run -c "const pkg = require('./package.json'); pkg.version = '${{ steps.version.outputs.version }}'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
 
-      - name: Publish to npm
+      - name: Publish to npm (OIDC)
         if: steps.npm_check.outputs.publish_needed == 'true'
         run: |
           if [ "${{ inputs.snapshot }}" == "true" ]; then
@@ -111,8 +111,6 @@ jobs:
           else
             bun publish --access public --tag latest
           fi
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         if: steps.npm_check.outputs.publish_needed == 'true' && steps.release_exists.outputs.exists == 'false' && inputs.snapshot != true
