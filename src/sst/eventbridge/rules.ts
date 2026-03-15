@@ -3,11 +3,7 @@ import type * as _aws from "@pulumi/aws";
 import type { z } from "zod";
 import type { FilterFor } from "../../runtime/Event";
 import { Event } from "../../runtime/Event";
-import {
-  AWS_EVENTBRIDGE_LIMITS,
-  DEFAULT_API_HTTP_TARGET,
-  DEFAULT_RETRY_POLICY,
-} from "./constants";
+import { AWS_EVENTBRIDGE_LIMITS, DEFAULT_API_HTTP_TARGET, DEFAULT_RETRY_POLICY } from "./constants";
 import { createTransform } from "./transform";
 import { schemaToJsonPaths } from "../../utils/schemaToJsonPaths";
 import type {
@@ -64,9 +60,7 @@ function getArnType(arn: PulumiOutput<string>): "sqs" | "api" | "unknown" {
 /**
  * Normalize events to array format for consistent processing
  */
-function normalizeEvents<E extends Event<string, z.ZodType>>(
-  events: E | E[],
-): E[] {
+function normalizeEvents<E extends Event<string, z.ZodType>>(events: E | E[]): E[] {
   const eventArray = Array.isArray(events) ? events : [events];
 
   if (eventArray.length === 0) {
@@ -83,9 +77,7 @@ function createEventPattern<E extends Event<string, z.ZodType>>(
   events: E[],
   filter?: FilterFor<E>,
 ): Record<string, unknown> {
-  return events.length === 1
-    ? events[0]!.pattern(filter)
-    : Event.computePattern(events, filter);
+  return events.length === 1 ? events[0]!.pattern(filter) : Event.computePattern(events, filter);
 }
 
 /**
@@ -145,14 +137,10 @@ function resolveQueryStringParameters<E extends Event<string, z.ZodType>>(
     throw new Error("Event schema must be a z.object()");
   }
 
-  const fieldSchema = (eventSchema.shape as Record<string, z.ZodType>)[
-    fieldName
-  ];
+  const fieldSchema = (eventSchema.shape as Record<string, z.ZodType>)[fieldName];
 
   if (!fieldSchema || !isZodSchema(fieldSchema)) {
-    throw new Error(
-      `Field "${fieldName}" not found in event schema or is not a z.object()`,
-    );
+    throw new Error(`Field "${fieldName}" not found in event schema or is not a z.object()`);
   }
 
   return schemaToJsonPaths(fieldSchema, fieldName);
@@ -186,9 +174,7 @@ function createRuleTarget<E extends Event<string, z.ZodType>>(
 
   // Apply smart defaults for API destinations
   const httpTarget =
-    arnType === "api"
-      ? resolvedHttpTarget || DEFAULT_API_HTTP_TARGET
-      : resolvedHttpTarget;
+    arnType === "api" ? resolvedHttpTarget || DEFAULT_API_HTTP_TARGET : resolvedHttpTarget;
 
   return new aws.cloudwatch.EventTarget(`${config.name}Target`, {
     rule: rule.name,
@@ -199,9 +185,7 @@ function createRuleTarget<E extends Event<string, z.ZodType>>(
     httpTarget,
     deadLetterConfig: target.dlq ? { arn: target.dlq.arn } : undefined,
     retryPolicy: target.retryPolicy || DEFAULT_RETRY_POLICY,
-    inputTransformer: target.transform
-      ? createTransform(target.transform, firstEvent)
-      : undefined,
+    inputTransformer: target.transform ? createTransform(target.transform, firstEvent) : undefined,
   });
 }
 
@@ -277,16 +261,8 @@ export function createEventRule<E extends Event<string, z.ZodType>>(
     return { rule };
   }
 
-  const target = createRuleTarget(
-    { ...config, events: eventArray },
-    rule,
-    eventArray[0]!,
-  );
-  const queuePolicy = createQueuePolicy(
-    config.name,
-    rule,
-    config.target.destination,
-  );
+  const target = createRuleTarget({ ...config, events: eventArray }, rule, eventArray[0]!);
+  const queuePolicy = createQueuePolicy(config.name, rule, config.target.destination);
 
   return { rule, target, queuePolicy };
 }

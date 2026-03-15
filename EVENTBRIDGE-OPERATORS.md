@@ -5,6 +5,7 @@ Complete reference for EventKit's type-safe AWS EventBridge pattern matching ope
 ## 🎯 Overview
 
 EventKit provides full TypeScript type safety for all AWS EventBridge pattern operators with:
+
 - **🔒 Complete Type Safety** - All operators validated against your Zod schemas
 - **⚡ Zero Runtime Overhead** - All type checking happens at compile time
 - **🎯 100% AWS Compliance** - Every official AWS EventBridge operator is supported
@@ -19,27 +20,27 @@ EventKit provides full TypeScript type safety for all AWS EventBridge pattern op
 
 ```typescript
 fileName: [
-  { prefix: "uploads/" },                           // Match files starting with "uploads/"
-  { suffix: ".pdf" },                              // Match files ending with ".pdf"
-  { wildcard: "*.jpg" },                           // Wildcard matching with *
-  { "equals-ignore-case": "README" },              // Case-insensitive exact match
-  { "anything-but": ["temp.txt"] },                // Exclude specific values
-  { exists: true },                                // Field must exist
-  { cidr: "10.0.0.0/24" },                        // IP address CIDR matching (NEW!)
-]
+  { prefix: "uploads/" }, // Match files starting with "uploads/"
+  { suffix: ".pdf" }, // Match files ending with ".pdf"
+  { wildcard: "*.jpg" }, // Wildcard matching with *
+  { "equals-ignore-case": "README" }, // Case-insensitive exact match
+  { "anything-but": ["temp.txt"] }, // Exclude specific values
+  { exists: true }, // Field must exist
+  { cidr: "10.0.0.0/24" }, // IP address CIDR matching (NEW!)
+];
 ```
 
 ### NEW! Advanced String Operators
 
 ```typescript
 serviceName: [
-  { prefix: { "equals-ignore-case": "API-" } },     // Case-insensitive prefix
-  { suffix: { "equals-ignore-case": ".PDF" } },     // Case-insensitive suffix
-  { "anything-but": { prefix: "temp-" } },          // Exclude by prefix
+  { prefix: { "equals-ignore-case": "API-" } }, // Case-insensitive prefix
+  { suffix: { "equals-ignore-case": ".PDF" } }, // Case-insensitive suffix
+  { "anything-but": { prefix: "temp-" } }, // Exclude by prefix
   { "anything-but": { suffix: [".tmp", ".log"] } }, // Exclude by suffix list
-  { "anything-but": { wildcard: "*.cache" } },      // Exclude by wildcard
-  { "anything-but": { cidr: "172.16.0.0/12" } },   // Exclude by CIDR
-]
+  { "anything-but": { wildcard: "*.cache" } }, // Exclude by wildcard
+  { "anything-but": { cidr: "172.16.0.0/12" } }, // Exclude by CIDR
+];
 ```
 
 ### Numeric Operators
@@ -47,51 +48,51 @@ serviceName: [
 ```typescript
 price: [
   { numeric: [">", 10, "<=", 100] }, // Range: 10 < price <= 100
-  { numeric: [">=", 1] },            // Minimum value
-  { numeric: ["=", 20] },            // Exact match
-  { "anything-but": [0, -1] },       // Exclude values
-  { exists: false },                 // Field must not exist
-]
+  { numeric: [">=", 1] }, // Minimum value
+  { numeric: ["=", 20] }, // Exact match
+  { "anything-but": [0, -1] }, // Exclude values
+  { exists: false }, // Field must not exist
+];
 ```
 
 ### Boolean Operators
 
 ```typescript
 isActive: [
-  true,                             // Exact match
-  { "anything-but": false },        // Must not be false
-  { exists: true },                 // Field must exist
-]
+  true, // Exact match
+  { "anything-but": false }, // Must not be false
+  { exists: true }, // Field must exist
+];
 ```
 
 ### Array Operators
 
 ```typescript
 tags: [
-  { exists: true },                 // Array must exist
+  { exists: true }, // Array must exist
   { "anything-but": [["deprecated"]] }, // Exclude specific arrays
-]
+];
 ```
 
 ### Object Operators
 
 ```typescript
 metadata: [
-  { exists: true },                 // Object must exist
-  { exists: false },                // Object must not exist
-]
+  { exists: true }, // Object must exist
+  { exists: false }, // Object must not exist
+];
 ```
 
 ### NEW! Null and Empty Value Operators
 
 ```typescript
 optionalField: [
-  null,                             // Match null values
-  "",                               // Match empty strings
-  { "anything-but": null },         // Exclude null values
-  { "anything-but": "" },           // Exclude empty strings
-  { exists: false },                // Field must not exist
-]
+  null, // Match null values
+  "", // Match empty strings
+  { "anything-but": null }, // Exclude null values
+  { "anything-but": "" }, // Exclude empty strings
+  { exists: false }, // Field must not exist
+];
 ```
 
 ### Compound OR Operators
@@ -103,7 +104,7 @@ optionalField: [
     { status: ["completed"] },
     { status: ["failed"], isActive: [false] },
     { price: [{ numeric: [">", 1000] }] },
-  ]
+  ];
 }
 ```
 
@@ -119,10 +120,11 @@ import { z } from "zod";
 const OrderEvent = new Event({
   name: "order.created",
   source: "order-service",
-  bus: () => new Bus({
-    name: "order-bus",
-    EventBridge: new EventBridgeClient(),
-  }),
+  bus: () =>
+    new Bus({
+      name: "order-bus",
+      EventBridge: new EventBridgeClient(),
+    }),
   schema: z.object({
     orderId: z.string(),
     amount: z.number(),
@@ -134,15 +136,15 @@ const OrderEvent = new Event({
 // Type-safe pattern with multiple operators
 const pattern = OrderEvent.pattern({
   orderId: [
-    { prefix: "ORDER-" },          // ✅ String operator
-    { suffix: "-PROD" },           // ✅ String operator
+    { prefix: "ORDER-" }, // ✅ String operator
+    { suffix: "-PROD" }, // ✅ String operator
   ],
   amount: [
-    { numeric: [">", 0, "<=", 10000] },  // ✅ Numeric range operator
+    { numeric: [">", 0, "<=", 10000] }, // ✅ Numeric range operator
   ],
-  status: ["pending", "completed"],      // ✅ Exact match (enum validation)
+  status: ["pending", "completed"], // ✅ Exact match (enum validation)
   customerEmail: [
-    { wildcard: "*@company.com" },       // ✅ Wildcard operator
+    { wildcard: "*@company.com" }, // ✅ Wildcard operator
     { "anything-but": "test@company.com" }, // ✅ Exclusion operator
   ],
 });
@@ -165,42 +167,51 @@ const pattern = OrderEvent.pattern({
 ### Infrastructure Usage
 
 **AWS SDK**
+
 ```typescript
 import { EventBridgeClient, PutRuleCommand } from "@aws-sdk/client-eventbridge";
 
 const client = new EventBridgeClient({ region: "us-east-1" });
 
 // Use the generated pattern with AWS SDK
-await client.send(new PutRuleCommand({
-  Name: "HighValueOrders",
-  EventPattern: JSON.stringify(OrderEvent.pattern({
-    amount: [{ numeric: [">", 1000] }],
-    status: ["pending"],
-    customerEmail: [{ wildcard: "*@enterprise.com" }],
-  })),
-  Targets: [{
-    Id: "1",
-    Arn: "arn:aws:sqs:us-east-1:123456789012:processing-queue"
-  }]
-}));
+await client.send(
+  new PutRuleCommand({
+    Name: "HighValueOrders",
+    EventPattern: JSON.stringify(
+      OrderEvent.pattern({
+        amount: [{ numeric: [">", 1000] }],
+        status: ["pending"],
+        customerEmail: [{ wildcard: "*@enterprise.com" }],
+      }),
+    ),
+    Targets: [
+      {
+        Id: "1",
+        Arn: "arn:aws:sqs:us-east-1:123456789012:processing-queue",
+      },
+    ],
+  }),
+);
 ```
 
 **AWS CDK**
-```typescript
-import { Rule } from 'aws-cdk-lib/aws-events';
-import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
 
-new Rule(this, 'HighValueOrders', {
+```typescript
+import { Rule } from "aws-cdk-lib/aws-events";
+import { SqsQueue } from "aws-cdk-lib/aws-events-targets";
+
+new Rule(this, "HighValueOrders", {
   eventPattern: OrderEvent.pattern({
     amount: [{ numeric: [">", 1000] }],
     status: ["pending"],
     customerEmail: [{ wildcard: "*@enterprise.com" }],
   }),
-  targets: [new SqsQueue(processingQueue)]
+  targets: [new SqsQueue(processingQueue)],
 });
 ```
 
 **SST Integration**
+
 ```typescript
 import { createEventRule } from "@divmode/eventkit/sst";
 
@@ -215,8 +226,8 @@ createEventRule(OrderEvent, {
   target: {
     destination: processingQueue,
     transform: (event) => ({
-      orderId: event.orderId,    // ✅ Fully typed
-      amount: event.amount,      // ✅ Fully typed
+      orderId: event.orderId, // ✅ Fully typed
+      amount: event.amount, // ✅ Fully typed
     }),
   },
 });
@@ -225,13 +236,10 @@ createEventRule(OrderEvent, {
 ### Multiple Events Pattern
 
 ```typescript
-const multiPattern = Event.computePattern(
-  [OrderCreated, OrderUpdated, OrderCompleted],
-  {
-    status: [{ "anything-but": "cancelled" }],
-    amount: [{ exists: true }],
-  }
-);
+const multiPattern = Event.computePattern([OrderCreated, OrderUpdated, OrderCompleted], {
+  status: [{ "anything-but": "cancelled" }],
+  amount: [{ exists: true }],
+});
 ```
 
 ## 🛡️ Type Safety
@@ -240,27 +248,27 @@ All operators are fully type-checked:
 
 ```typescript
 // ✅ Valid - prefix operator on string field
-fileName: [{ prefix: "upload-" }]
+fileName: [{ prefix: "upload-" }];
 
 // ❌ TypeScript Error - numeric operator on string field
-fileName: [{ numeric: [">", 5] }]
+fileName: [{ numeric: [">", 5] }];
 
 // ❌ TypeScript Error - field doesn't exist in schema
-invalidField: [{ exists: true }]
+invalidField: [{ exists: true }];
 
 // ✅ Valid - proper numeric comparison
-price: [{ numeric: [">", 0, "<=", 1000] }]
+price: [{ numeric: [">", 0, "<=", 1000] }];
 ```
 
 ## 📊 Operator Support Matrix
 
-| Type | Exact | Prefix | Suffix | Wildcard | Numeric | Anything-But | Exists | Case-Insensitive |
-|------|-------|--------|--------|----------|---------|--------------|--------|------------------|
-| String | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Number | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Boolean | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Array | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
-| Object | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Type    | Exact | Prefix | Suffix | Wildcard | Numeric | Anything-But | Exists | Case-Insensitive |
+| ------- | ----- | ------ | ------ | -------- | ------- | ------------ | ------ | ---------------- |
+| String  | ✅    | ✅     | ✅     | ✅       | ❌      | ✅           | ✅     | ✅               |
+| Number  | ✅    | ❌     | ❌     | ❌       | ✅      | ✅           | ✅     | ❌               |
+| Boolean | ✅    | ❌     | ❌     | ❌       | ❌      | ✅           | ✅     | ❌               |
+| Array   | ✅    | ❌     | ❌     | ❌       | ❌      | ✅           | ✅     | ❌               |
+| Object  | ❌    | ❌     | ❌     | ❌       | ❌      | ❌           | ✅     | ❌               |
 
 ## 🎯 Advanced Features
 
@@ -268,7 +276,7 @@ price: [{ numeric: [">", 0, "<=", 1000] }]
 
 ```typescript
 // Multiple numeric conditions in one operator
-temperature: [{ numeric: [">", 10, "<=", 30] }]  // 10 < temp <= 30
+temperature: [{ numeric: [">", 10, "<=", 30] }]; // 10 < temp <= 30
 ```
 
 ### Complex OR Conditions
@@ -278,13 +286,13 @@ temperature: [{ numeric: [">", 10, "<=", 30] }]  // 10 < temp <= 30
   $or: [
     {
       status: ["urgent"],
-      priority: [{ numeric: [">", 8] }]
+      priority: [{ numeric: [">", 8] }],
     },
     {
       customerType: ["enterprise"],
-      amount: [{ numeric: [">", 10000] }]
-    }
-  ]
+      amount: [{ numeric: [">", 10000] }],
+    },
+  ];
 }
 ```
 
@@ -292,10 +300,10 @@ temperature: [{ numeric: [">", 10, "<=", 30] }]  // 10 < temp <= 30
 
 ```typescript
 // Supports multiple wildcards (not consecutive)
-fileName: [{ wildcard: "logs/*/*.json" }]
+fileName: [{ wildcard: "logs/*/*.json" }];
 
 // Case-insensitive prefix
-service: [{ prefix: { "equals-ignore-case": "event" } }]
+service: [{ prefix: { "equals-ignore-case": "event" } }];
 ```
 
 ## 🚀 Benefits
@@ -326,12 +334,14 @@ const OrderCreated = new Event({
     currency: z.string(),
     customerTier: z.enum(["basic", "premium", "enterprise"]),
     region: z.string(),
-    items: z.array(z.object({
-      productId: z.string(),
-      quantity: z.number(),
-      price: z.number(),
-    })),
-  })
+    items: z.array(
+      z.object({
+        productId: z.string(),
+        quantity: z.number(),
+        price: z.number(),
+      }),
+    ),
+  }),
 });
 
 // High-value enterprise orders
@@ -345,10 +355,7 @@ const enterpriseHighValuePattern = OrderCreated.pattern({
 // Bulk orders (multiple items)
 const bulkOrderPattern = OrderCreated.pattern({
   items: [{ exists: true }],
-  $or: [
-    { amount: [{ numeric: [">", 5000] }] },
-    { "items.length": [{ numeric: [">", 10] }] }
-  ]
+  $or: [{ amount: [{ numeric: [">", 5000] }] }, { "items.length": [{ numeric: [">", 10] }] }],
 });
 
 // Regional processing rules
@@ -376,7 +383,7 @@ const DeviceEvent = new Event({
     }),
     status: z.enum(["online", "offline", "warning", "critical"]),
     firmware: z.string(),
-  })
+  }),
 });
 
 // Critical alerts
@@ -384,7 +391,7 @@ const criticalAlertsPattern = DeviceEvent.pattern({
   $or: [
     { temperature: [{ numeric: [">", 80] }] },
     { batteryLevel: [{ numeric: ["<", 10] }] },
-    { status: ["critical"] }
+    { status: ["critical"] },
   ],
   deviceId: [{ "anything-but": { prefix: "test-" } }],
 });
@@ -439,7 +446,7 @@ import { OrderCreated } from "./events";
 
 const pattern = OrderCreated.pattern({
   amount: [{ numeric: [">", 1000] }],
-  customerTier: ["premium", "enterprise"]
+  customerTier: ["premium", "enterprise"],
 });
 
 // Output for Terraform
@@ -449,33 +456,30 @@ console.log(`order_pattern = '${JSON.stringify(pattern)}'`);
 ### CDK Stack Integration
 
 ```typescript
-import { Stack, StackProps } from 'aws-cdk-lib';
-import { Rule } from 'aws-cdk-lib/aws-events';
-import { SqsQueue } from 'aws-cdk-lib/aws-events-targets';
-import { OrderCreated, UserRegistered, PaymentProcessed } from '../events';
+import { Stack, StackProps } from "aws-cdk-lib";
+import { Rule } from "aws-cdk-lib/aws-events";
+import { SqsQueue } from "aws-cdk-lib/aws-events-targets";
+import { OrderCreated, UserRegistered, PaymentProcessed } from "../events";
 
 export class EventProcessingStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     // Multi-event processing rule
-    const orderWorkflowRule = new Rule(this, 'OrderWorkflow', {
+    const orderWorkflowRule = new Rule(this, "OrderWorkflow", {
       eventPattern: Event.computePattern([OrderCreated, PaymentProcessed], {
-        $or: [
-          { status: ["pending", "processing"] },
-          { amount: [{ numeric: [">", 500] }] }
-        ]
+        $or: [{ status: ["pending", "processing"] }, { amount: [{ numeric: [">", 500] }] }],
       }),
-      targets: [new SqsQueue(this.workflowQueue)]
+      targets: [new SqsQueue(this.workflowQueue)],
     });
 
     // Customer lifecycle rule
-    const customerRule = new Rule(this, 'CustomerLifecycle', {
+    const customerRule = new Rule(this, "CustomerLifecycle", {
       eventPattern: UserRegistered.pattern({
         email: [{ wildcard: "*@enterprise.com" }],
-        plan: ["premium", "enterprise"]
+        plan: ["premium", "enterprise"],
       }),
-      targets: [new SqsQueue(this.onboardingQueue)]
+      targets: [new SqsQueue(this.onboardingQueue)],
     });
   }
 }

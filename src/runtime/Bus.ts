@@ -16,13 +16,7 @@ export class Bus {
   private _name: string;
   private _eventBridge: EventBridgeClient;
 
-  constructor({
-    name,
-    EventBridge,
-  }: {
-    name: string;
-    EventBridge: EventBridgeClient;
-  }) {
+  constructor({ name, EventBridge }: { name: string; EventBridge: EventBridgeClient }) {
     this._name = name;
     this._eventBridge = EventBridge;
   }
@@ -81,9 +75,7 @@ export class Bus {
    * - Max 10 entries per request
    * - Max 256KB per request
    */
-  private chunkEntries(
-    entries: PutEventsRequestEntry[],
-  ): PutEventsRequestEntry[][] {
+  private chunkEntries(entries: PutEventsRequestEntry[]): PutEventsRequestEntry[][] {
     const chunks: PutEventsRequestEntry[][] = [];
     let currentChunk: PutEventsRequestEntry[] = [];
     let currentSize = 0;

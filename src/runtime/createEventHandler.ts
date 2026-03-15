@@ -40,16 +40,14 @@ import type { Event } from "./Event";
  */
 
 // Simplified event payload type that TypeScript can understand
-type EventPayload<E extends Event<string, z.ZodType>> = E extends Event<
-  infer N,
-  infer S
->
-  ? {
-      type: N;
-      properties: z.infer<S>;
-      metadata?: unknown;
-    }
-  : never;
+type EventPayload<E extends Event<string, z.ZodType>> =
+  E extends Event<infer N, infer S>
+    ? {
+        type: N;
+        properties: z.infer<S>;
+        metadata?: unknown;
+      }
+    : never;
 
 export function createEventHandler<E extends Event<string, z.ZodType>>(
   events: readonly E[],
@@ -66,9 +64,7 @@ export function createEventHandler<E extends Event<string, z.ZodType>>(
     }
 
     // Validate properties using the event's schema
-    const validatedProperties = matchingEvent.schema.parse(
-      awsEvent.detail.properties,
-    );
+    const validatedProperties = matchingEvent.schema.parse(awsEvent.detail.properties);
 
     await callback({
       type: eventType,

@@ -24,11 +24,7 @@
  */
 
 // Constants
-export {
-  AWS_EVENTBRIDGE_LIMITS,
-  DEFAULT_API_HTTP_TARGET,
-  DEFAULT_RETRY_POLICY,
-} from "./constants";
+export { AWS_EVENTBRIDGE_LIMITS, DEFAULT_API_HTTP_TARGET, DEFAULT_RETRY_POLICY } from "./constants";
 // Rule creation utilities
 export { createEventRule } from "./rules";
 // Transform utilities

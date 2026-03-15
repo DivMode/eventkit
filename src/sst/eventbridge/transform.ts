@@ -71,10 +71,7 @@ function createSystemProxy(systemFields: Set<string>): {
 /**
  * Check if an object contains the event proxy (indicates full event usage)
  */
-function containsEventProxy(
-  obj: unknown,
-  proxy: Record<string, string>,
-): boolean {
+function containsEventProxy(obj: unknown, proxy: Record<string, string>): boolean {
   if (obj === proxy) return true;
   if (typeof obj !== "object" || obj === null) return false;
 
@@ -174,11 +171,7 @@ export function createTransform<E extends Event<string, z.ZodType>>(
   if (usesFullEvent && eventSchema) {
     // Extract schema fields for full event usage
     const schemaFields = extractSchemaFields(eventSchema.schema);
-    const inputPaths = generateInputPaths(
-      accessedFields,
-      systemFields,
-      schemaFields,
-    );
+    const inputPaths = generateInputPaths(accessedFields, systemFields, schemaFields);
 
     // Create template with all field placeholders
     const eventTemplate: Record<string, string> = {};
@@ -187,11 +180,7 @@ export function createTransform<E extends Event<string, z.ZodType>>(
     }
 
     // Reconstruct result with proper placeholders
-    const finalResult = reconstructWithTemplate(
-      result,
-      eventProxy,
-      eventTemplate,
-    );
+    const finalResult = reconstructWithTemplate(result, eventProxy, eventTemplate);
 
     return {
       inputPaths,

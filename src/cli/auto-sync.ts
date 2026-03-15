@@ -14,11 +14,7 @@
 
 import { schemaRegistry } from "../registry/eventbridge";
 import { registerEventSchema } from "../registry/registration";
-import {
-  collectEventInstances,
-  configureRegistry,
-  scanForEventFiles,
-} from "./shared";
+import { collectEventInstances, configureRegistry, scanForEventFiles } from "./shared";
 
 async function autoSyncAllSchemas(
   options: { deleteOrphaned?: boolean } = { deleteOrphaned: true },
@@ -32,8 +28,7 @@ async function autoSyncAllSchemas(
 
     // Scan for files and collect Event instances
     const files = await scanForEventFiles();
-    const { events: allEvents, importedCount } =
-      await collectEventInstances(files);
+    const { events: allEvents, importedCount } = await collectEventInstances(files);
 
     if (allEvents.length === 0) {
       return;
@@ -45,9 +40,7 @@ async function autoSyncAllSchemas(
     const existingTypes = new Set(existingSchemas.map((s) => s.type));
     const discoveredTypes = new Set(allEvents.map((e) => e.name));
 
-    console.log(
-      `   • Found ${existingSchemas.length} existing schemas in registry`,
-    );
+    console.log(`   • Found ${existingSchemas.length} existing schemas in registry`);
 
     // Sync schemas
     let created = 0;
@@ -81,14 +74,10 @@ async function autoSyncAllSchemas(
 
     // Delete orphaned schemas if requested
     if (options.deleteOrphaned) {
-      const orphanedTypes = Array.from(existingTypes).filter(
-        (type) => !discoveredTypes.has(type),
-      );
+      const orphanedTypes = Array.from(existingTypes).filter((type) => !discoveredTypes.has(type));
 
       if (orphanedTypes.length > 0) {
-        console.log(
-          `\n🗑️  Deleting ${orphanedTypes.length} orphaned schemas...`,
-        );
+        console.log(`\n🗑️  Deleting ${orphanedTypes.length} orphaned schemas...`);
 
         for (const type of orphanedTypes) {
           try {

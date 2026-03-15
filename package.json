@@ -2,6 +2,42 @@
   "name": "@divmode/eventkit",
   "version": "1.2.0",
   "description": "Type-safe AWS EventBridge toolkit. Generate patterns from Zod schemas, publish events, auto-register schemas, and build event-driven architectures with full TypeScript support.",
+  "keywords": [
+    "ast",
+    "aws",
+    "build-tools",
+    "cli",
+    "discovery",
+    "event-system",
+    "eventbridge",
+    "events",
+    "infrastructure",
+    "messaging",
+    "pubsub",
+    "pulumi",
+    "schema-registry",
+    "sst",
+    "type-safety",
+    "typescript",
+    "validation",
+    "zod"
+  ],
+  "homepage": "https://github.com/DivMode/eventkit#readme",
+  "bugs": {
+    "url": "https://github.com/DivMode/eventkit/issues"
+  },
+  "license": "MIT",
+  "author": "Divmode",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DivMode/eventkit.git"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,12 +63,9 @@
       "import": "./dist/sst/index.js"
     }
   },
-  "files": [
-    "dist/**/*",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rm -rf dist node_modules",
     "prepare": "bun run build",
@@ -44,36 +77,24 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build"
   },
-  "keywords": [
-    "typescript",
-    "events",
-    "event-system",
-    "zod",
-    "validation",
-    "discovery",
-    "ast",
-    "schema-registry",
-    "eventbridge",
-    "aws",
-    "pubsub",
-    "messaging",
-    "type-safety",
-    "build-tools",
-    "cli",
-    "sst",
-    "pulumi",
-    "infrastructure"
-  ],
-  "author": "Divmode",
-  "license": "MIT",
   "dependencies": {
     "fast-glob": "^3.3.3",
     "zod": "^4.1.8"
   },
+  "devDependencies": {
+    "@pulumi/aws": "^6.0.0",
+    "@types/aws-lambda": "^8.10.145",
+    "@types/bun": "^1.2.22",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
   "peerDependencies": {
-    "typescript": ">=4.9.0",
     "@aws-sdk/client-eventbridge": "^3.0.0",
-    "sst": ">=3.0.0"
+    "sst": ">=3.0.0",
+    "typescript": ">=4.9.0"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-eventbridge": {
@@ -88,28 +109,7 @@
     "@pulumi/aws": "^6.0.0",
     "@pulumi/pulumi": "^3.0.0"
   },
-  "devDependencies": {
-    "@pulumi/aws": "^6.0.0",
-    "@types/aws-lambda": "^8.10.145",
-    "@types/bun": "^1.2.22",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "typescript": "^5.0.0"
-  },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/DivMode/eventkit.git"
-  },
-  "bugs": {
-    "url": "https://github.com/DivMode/eventkit/issues"
-  },
-  "homepage": "https://github.com/DivMode/eventkit#readme",
-  "publishConfig": {
-    "access": "public"
   }
 }

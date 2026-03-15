@@ -32,10 +32,11 @@ const eventBridgeClient = new EventBridgeClient({
 export const OrderCreated = new Event({
   name: "order.created",
   source: "ecommerce-api",
-  bus: () => new Bus({
-    name: "order-events-bus", // Explicitly specify your bus name
-    EventBridge: eventBridgeClient,
-  }),
+  bus: () =>
+    new Bus({
+      name: "order-events-bus", // Explicitly specify your bus name
+      EventBridge: eventBridgeClient,
+    }),
   schema: z.object({
     orderId: z.string(),
     customerId: z.string(),
@@ -55,10 +56,11 @@ export const OrderCreated = new Event({
 export const PaymentProcessed = new Event({
   name: "payment.processed",
   source: "payment-service",
-  bus: () => new Bus({
-    name: "payment-events-bus", // Different bus for payment events
-    EventBridge: eventBridgeClient,
-  }),
+  bus: () =>
+    new Bus({
+      name: "payment-events-bus", // Different bus for payment events
+      EventBridge: eventBridgeClient,
+    }),
   schema: z.object({
     paymentId: z.string(),
     orderId: z.string(),
@@ -88,12 +90,9 @@ export const failedPaymentPattern = PaymentProcessed.pattern({
 });
 
 // Multi-event patterns (using only common fields)
-export const criticalEventsPattern = Event.computePattern(
-  [OrderCreated, PaymentProcessed],
-  {
-    amount: [{ numeric: [">", 5000] }], // Common field between both events
-  },
-);
+export const criticalEventsPattern = Event.computePattern([OrderCreated, PaymentProcessed], {
+  amount: [{ numeric: [">", 5000] }], // Common field between both events
+});
 
 // =============================================================================
 // Event Publishing (Requires Configuration)
@@ -148,12 +147,8 @@ export type OrderData = z.infer<typeof OrderCreated.schema>;
 export type PaymentData = z.infer<typeof PaymentProcessed.schema>;
 
 // Filter types for pattern generation
-export type OrderFilter = import("../src/runtime/index.js").FilterFor<
-  typeof OrderCreated
->;
-export type PaymentFilter = import("../src/runtime/index.js").FilterFor<
-  typeof PaymentProcessed
->;
+export type OrderFilter = import("../src/runtime/index.js").FilterFor<typeof OrderCreated>;
+export type PaymentFilter = import("../src/runtime/index.js").FilterFor<typeof PaymentProcessed>;
 
 // =============================================================================
 // Usage Examples
@@ -165,14 +160,8 @@ async function main() {
 
   // 1. Pattern generation (works without configuration)
   console.log("\n1. Generated EventBridge Patterns:");
-  console.log(
-    "High-value orders:",
-    JSON.stringify(highValueOrderPattern, null, 2),
-  );
-  console.log(
-    "Failed payments:",
-    JSON.stringify(failedPaymentPattern, null, 2),
-  );
+  console.log("High-value orders:", JSON.stringify(highValueOrderPattern, null, 2));
+  console.log("Failed payments:", JSON.stringify(failedPaymentPattern, null, 2));
 
   // 2. Schema validation (works without configuration)
   console.log("\n2. Schema Validation:");

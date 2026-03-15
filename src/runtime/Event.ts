@@ -12,7 +12,7 @@ import type { Bus } from "./Bus";
 export type NumericComparison = [
   ">" | "<" | "=" | "<=" | ">=",
   number,
-  ...Array<">" | "<" | "=" | "<=" | ">=" | number>
+  ...Array<">" | "<" | "=" | "<=" | ">=" | number>,
 ];
 
 /**
@@ -30,7 +30,7 @@ export interface BaseStringOperators {
   suffix?: string | CaseInsensitiveOperators;
   wildcard?: string;
   "equals-ignore-case"?: string;
-  cidr?: string;  // IP address CIDR matching
+  cidr?: string; // IP address CIDR matching
 }
 
 /**
@@ -38,9 +38,12 @@ export interface BaseStringOperators {
  */
 export interface AnythingButOperator {
   "anything-but"?:
-    | string | string[]
-    | number | number[]
-    | boolean | boolean[]
+    | string
+    | string[]
+    | number
+    | number[]
+    | boolean
+    | boolean[]
     | null
     | BaseStringOperators
     | { prefix: string | string[] }
@@ -77,21 +80,25 @@ export interface UniversalOperators<T> extends AnythingButOperator {
  * Supports null values, empty strings, and all AWS EventBridge operators
  */
 export type EventBridgeFilterValue<T> =
-  | T[]  // Exact matching: ["value1", "value2"]
-  | null[]  // Null matching: [null]
-  | Array<T | null | (
-      T extends string ? StringOperators :
-      T extends number ? NumericOperators :
-      UniversalOperators<T>
-    )>;
+  | T[] // Exact matching: ["value1", "value2"]
+  | null[] // Null matching: [null]
+  | Array<
+      | T
+      | null
+      | (T extends string
+          ? StringOperators
+          : T extends number
+            ? NumericOperators
+            : UniversalOperators<T>)
+    >;
 
 /**
  * Type-safe EventBridge filter for event properties
  */
 export type EventFilter<S extends z.ZodType> = {
-  [K in keyof z.infer<S>]?: EventBridgeFilterValue<z.infer<S>[K]>
+  [K in keyof z.infer<S>]?: EventBridgeFilterValue<z.infer<S>[K]>;
 } & {
-  $or?: Array<EventFilter<S>>;  // Compound OR operator
+  $or?: Array<EventFilter<S>>; // Compound OR operator
 };
 
 // =============================================================================
@@ -135,12 +142,7 @@ export class Event<N extends string, S extends z.ZodType> {
   declare readonly _schemaType: z.infer<S>;
   declare readonly _filterType: EventFilter<S>;
 
-  constructor(config: {
-    name: N;
-    source: string;
-    bus: Bus | (() => Bus);
-    schema: S;
-  }) {
+  constructor(config: { name: N; source: string; bus: Bus | (() => Bus); schema: S }) {
     this._name = config.name;
     this._source = config.source;
     this._bus = config.bus;
@@ -165,7 +167,7 @@ export class Event<N extends string, S extends z.ZodType> {
 
   private get bus(): Bus {
     if (!this._resolvedBus) {
-      this._resolvedBus = typeof this._bus === 'function' ? this._bus() : this._bus;
+      this._resolvedBus = typeof this._bus === "function" ? this._bus() : this._bus;
     }
     return this._resolvedBus;
   }
@@ -182,11 +184,11 @@ export class Event<N extends string, S extends z.ZodType> {
     };
 
     // Attach bus reference for multi-bus support (hidden property)
-    Object.defineProperty(entry, '__bus', {
+    Object.defineProperty(entry, "__bus", {
       value: this.bus,
-      enumerable: false,   // Won't show in JSON.stringify
+      enumerable: false, // Won't show in JSON.stringify
       writable: false,
-      configurable: false
+      configurable: false,
     });
 
     return entry;
@@ -198,7 +200,10 @@ export class Event<N extends string, S extends z.ZodType> {
    * Enforces strict type checking to prevent extra properties
    */
   async publish<U extends z.infer<S>>(
-    data: NoExtraProperties<z.infer<S>, U> | NoExtraProperties<z.infer<S>, U>[] | PutEventsRequestEntry[]
+    data:
+      | NoExtraProperties<z.infer<S>, U>
+      | NoExtraProperties<z.infer<S>, U>[]
+      | PutEventsRequestEntry[],
   ): Promise<PutEventsResponse> {
     if (Array.isArray(data)) {
       if (data.length === 0) {
@@ -219,7 +224,7 @@ export class Event<N extends string, S extends z.ZodType> {
           if (entryBus !== firstBus) {
             throw new Error(
               "Cannot publish events from different buses in single call. " +
-              "Use separate publish() calls per bus for better isolation and clarity."
+                "Use separate publish() calls per bus for better isolation and clarity.",
             );
           }
         }
@@ -230,8 +235,8 @@ export class Event<N extends string, S extends z.ZodType> {
 
       // If we reach here, TypeScript should know it's z.infer<S>[]
       // But we'll be explicit to help the compiler
-      const schemaEntries = data.filter(item => !isPutEventsRequestEntry(item)) as z.infer<S>[];
-      const entries = schemaEntries.map(props => this.create(props));
+      const schemaEntries = data.filter((item) => !isPutEventsRequestEntry(item)) as z.infer<S>[];
+      const entries = schemaEntries.map((props) => this.create(props));
       return this.bus.put(entries);
     } else {
       // Single event publishing - cast to z.infer<S> for internal use
@@ -248,10 +253,12 @@ export class Event<N extends string, S extends z.ZodType> {
       "detail-type": [this._name],
     };
 
-    return filter ? {
-      ...basePattern,
-      detail: { properties: filter }
-    } : basePattern;
+    return filter
+      ? {
+          ...basePattern,
+          detail: { properties: filter },
+        }
+      : basePattern;
   }
 
   /**
@@ -259,26 +266,27 @@ export class Event<N extends string, S extends z.ZodType> {
    */
   static computePattern<E extends Event<string, z.ZodType>>(
     events: E[],
-    filter?: EventFilter<E["schema"]>
+    filter?: EventFilter<E["schema"]>,
   ): Record<string, unknown> {
     if (events.length === 0) {
       throw new Error("Cannot compute pattern for empty events array");
     }
 
-    const sources = [...new Set(events.map(e => e.source))];
-    const detailTypes = events.map(e => e.name);
+    const sources = [...new Set(events.map((e) => e.source))];
+    const detailTypes = events.map((e) => e.name);
 
     const basePattern = {
       source: sources,
       "detail-type": detailTypes,
     };
 
-    return filter ? {
-      ...basePattern,
-      detail: { properties: filter }
-    } : basePattern;
+    return filter
+      ? {
+          ...basePattern,
+          detail: { properties: filter },
+        }
+      : basePattern;
   }
-
 }
 
 // =============================================================================
@@ -289,11 +297,13 @@ export class Event<N extends string, S extends z.ZodType> {
  * Type guard to check if value is a PutEventsRequestEntry
  */
 function isPutEventsRequestEntry(value: any): value is PutEventsRequestEntry {
-  return value &&
-    typeof value === 'object' &&
-    typeof value.Source === 'string' &&
-    typeof value.DetailType === 'string' &&
-    (value.Detail === undefined || typeof value.Detail === 'string');
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof value.Source === "string" &&
+    typeof value.DetailType === "string" &&
+    (value.Detail === undefined || typeof value.Detail === "string")
+  );
 }
 
 /**
@@ -302,7 +312,6 @@ function isPutEventsRequestEntry(value: any): value is PutEventsRequestEntry {
 function getBusFromEntry(entry: PutEventsRequestEntry): Bus | undefined {
   return (entry as any).__bus;
 }
-
 
 // =============================================================================
 // Type Helpers for External Use

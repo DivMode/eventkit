@@ -7,7 +7,7 @@ import { schemaRegistry } from "./eventbridge";
  */
 export function toJsonSchema(schema: z.ZodType, eventName: string): any {
   // Use Zod v4's built-in schema method if available
-  if (typeof (schema as any).schema === 'function') {
+  if (typeof (schema as any).schema === "function") {
     return (schema as any).schema();
   }
 

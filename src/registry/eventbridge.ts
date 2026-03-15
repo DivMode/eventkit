@@ -88,11 +88,8 @@ export namespace schemaRegistry {
     try {
       const client = await getSchemaClient();
       const config = getRegistryConfig();
-      const {
-        CreateSchemaCommand,
-        UpdateSchemaCommand,
-        DescribeSchemaCommand,
-      } = await import("@aws-sdk/client-schemas");
+      const { CreateSchemaCommand, UpdateSchemaCommand, DescribeSchemaCommand } =
+        await import("@aws-sdk/client-schemas");
 
       // Check if schema already exists
       let schemaExists = false;
@@ -155,10 +152,7 @@ export namespace schemaRegistry {
   /**
    * Get a schema from EventBridge Schema Registry
    */
-  export async function getSchema(
-    type: string,
-    version?: string,
-  ): Promise<SchemaRecord | null> {
+  export async function getSchema(type: string, version?: string): Promise<SchemaRecord | null> {
     try {
       const client = await getSchemaClient();
       const config = getRegistryConfig();
@@ -180,9 +174,7 @@ export namespace schemaRegistry {
         type: response.SchemaName!,
         schema: response.Content,
         version: response.SchemaVersion!,
-        registeredAt: response.LastModified
-          ? response.LastModified.getTime()
-          : Date.now(),
+        registeredAt: response.LastModified ? response.LastModified.getTime() : Date.now(),
         description: response.Description,
         tags: response.Tags,
       };
@@ -233,10 +225,7 @@ export namespace schemaRegistry {
   /**
    * Delete a schema from EventBridge Schema Registry
    */
-  export async function deleteSchema(
-    type: string,
-    version?: string,
-  ): Promise<void> {
+  export async function deleteSchema(type: string, version?: string): Promise<void> {
     try {
       const client = await getSchemaClient();
       const config = getRegistryConfig();
@@ -264,9 +253,7 @@ export namespace schemaRegistry {
     try {
       const client = await getSchemaClient();
       const config = getRegistryConfig();
-      const { DescribeRegistryCommand } = await import(
-        "@aws-sdk/client-schemas"
-      );
+      const { DescribeRegistryCommand } = await import("@aws-sdk/client-schemas");
 
       const command = new DescribeRegistryCommand({
         RegistryName: config.registryName,
@@ -324,8 +311,7 @@ function createRegistryConfigFromEnv(): EventBridgeRegistryConfig | null {
 
   return {
     registryName,
-    region:
-      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
     credentials: process.env.AWS_ACCESS_KEY_ID
       ? {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,

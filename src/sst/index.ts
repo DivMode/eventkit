@@ -23,6 +23,5 @@
  * ```
  */
 
-
 // Re-export all EventBridge infrastructure utilities
 export * from "./eventbridge/index";

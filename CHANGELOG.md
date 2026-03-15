@@ -8,17 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2025-12-09
 
 ### Added
+
 - `queryStringParameters` schema auto-resolution - pass field name string to auto-generate JSON path mappings from event schema
 - `schemaToJsonPaths` utility function for CDK, Terraform, and manual configurations
 - Complete documentation for EventBridge query string parameters with examples
 
 ### Fixed
+
 - Documented AWS limitation where EventBridge sends empty strings for missing JSON path values
 - Added filter solution for receiving endpoints to handle empty query params
 
 ## [Unreleased]
 
 ### Added
+
 - Initial public release of EventKit
 - Type-safe AWS EventBridge patterns from Zod schemas
 - Universal compatibility with AWS SDK, CDK, Terraform, SST
@@ -30,16 +33,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation and examples
 
 ### Changed
+
 - Migrated from private monorepo to public standalone package
 - Made SST dependencies optional for standalone usage
 
 ### Fixed
+
 - Bus initialization now works in both SST and standalone contexts
 - Environment variable fallback for non-SST usage
 
 ## [1.0.0] - 2025-09-18
 
 ### Added
+
 - Initial stable release
 - Core Event class with type-safe pattern generation
 - Bus class for EventBridge publishing

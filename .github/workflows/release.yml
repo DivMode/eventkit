@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'package.json'
+      - "package.json"
   workflow_dispatch:
     inputs:
       version:
@@ -106,7 +106,7 @@ jobs:
       - name: Setup Node.js for npm OIDC
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           # NO registry-url - it sets NODE_AUTH_TOKEN which blocks OIDC
 
       - name: Install latest npm for OIDC support
@@ -124,7 +124,7 @@ jobs:
             npm publish --access public --tag latest
           fi
         env:
-          NODE_AUTH_TOKEN: ''  # Clear to allow OIDC
+          NODE_AUTH_TOKEN: "" # Clear to allow OIDC
 
       - name: Create GitHub release
         if: steps.npm_check.outputs.publish_needed == 'true' && steps.release_exists.outputs.exists == 'false' && inputs.snapshot != true

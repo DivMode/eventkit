@@ -12,11 +12,7 @@
  */
 
 import { registerAllEventSchemas } from "../registry/registration";
-import {
-  collectEventInstances,
-  configureRegistry,
-  scanForEventFiles,
-} from "./shared";
+import { collectEventInstances, configureRegistry, scanForEventFiles } from "./shared";
 
 async function autoRegisterAllSchemas() {
   const startTime = Date.now();
@@ -28,11 +24,7 @@ async function autoRegisterAllSchemas() {
 
     // Scan for files and collect Event instances
     const files = await scanForEventFiles();
-    const {
-      events: allEvents,
-      importedCount,
-      failedCount,
-    } = await collectEventInstances(files);
+    const { events: allEvents, importedCount, failedCount } = await collectEventInstances(files);
 
     if (allEvents.length === 0) {
       return;

@@ -48,8 +48,8 @@ export async function scanForEventFiles(): Promise<string[]> {
       "**/tests/**",
       "**/__tests__/**",
       "**/eventkit/**",
-      "**/@divmode/eventkit/**"
-    ]
+      "**/@divmode/eventkit/**",
+    ],
   });
 
   allFiles.push(...files);
@@ -76,7 +76,7 @@ export async function collectEventInstances(files: string[]): Promise<{
       const fullPath = `${rootPath}/${file}`;
 
       // Only try to import files that might contain Event definitions
-      const content = await readFile(fullPath, 'utf-8');
+      const content = await readFile(fullPath, "utf-8");
 
       // Quick check if file might contain Event instances
       if (content.includes("new Event(") || content.includes("Event({")) {
@@ -104,7 +104,9 @@ export async function collectEventInstances(files: string[]): Promise<{
   }
 
   if (allEvents.length === 0) {
-    console.log("ℹ️  No Event instances found. Make sure you're using 'new Event({...})' in your code.");
+    console.log(
+      "ℹ️  No Event instances found. Make sure you're using 'new Event({...})' in your code.",
+    );
   }
 
   return { events: allEvents, importedCount, failedCount };

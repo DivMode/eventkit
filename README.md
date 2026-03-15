@@ -41,12 +41,12 @@ Generate type-safe AWS EventBridge patterns with zero runtime overhead. Transfor
 ```typescript
 // ❌ Error-prone, no IntelliSense, runtime failures
 const pattern = {
-  "detail": {
-    "properties": {
-      "amout": [{ "numeric": [">", 1000] }], // Typo!
-      "status": ["PENDING"] // Wrong enum value!
-    }
-  }
+  detail: {
+    properties: {
+      amout: [{ numeric: [">", 1000] }], // Typo!
+      status: ["PENDING"], // Wrong enum value!
+    },
+  },
 };
 ```
 
@@ -55,8 +55,8 @@ const pattern = {
 ```typescript
 // ✅ Type-safe, IntelliSense, compile-time validation
 const pattern = OrderCreated.pattern({
-  amount: [{ numeric: [">", 1000] }],    // ✅ Correct field name
-  status: ["pending"]                    // ✅ Validated enum value
+  amount: [{ numeric: [">", 1000] }], // ✅ Correct field name
+  status: ["pending"], // ✅ Validated enum value
 });
 ```
 
@@ -82,10 +82,11 @@ import { z } from "zod";
 const OrderCreated = new Event({
   name: "order.created",
   source: "order-service",
-  bus: () => new Bus({
-    name: "my-event-bus",
-    EventBridge: new EventBridgeClient(),
-  }),
+  bus: () =>
+    new Bus({
+      name: "my-event-bus",
+      EventBridge: new EventBridgeClient(),
+    }),
   schema: z.object({
     orderId: z.string(),
     amount: z.number(),
@@ -94,13 +95,12 @@ const OrderCreated = new Event({
 });
 ```
 
-
 ### 2. Generate Type-Safe Patterns
 
 ```typescript
 const pattern = OrderCreated.pattern({
-  orderId: [{ prefix: "ORDER-" }],         // ✅ String operators
-  amount: [{ numeric: [">", 1000] }],      // ✅ Numeric operators
+  orderId: [{ prefix: "ORDER-" }], // ✅ String operators
+  amount: [{ numeric: [">", 1000] }], // ✅ Numeric operators
   customerTier: ["premium", "enterprise"], // ✅ Enum validation
 });
 
@@ -114,7 +114,7 @@ const pattern = OrderCreated.pattern({
 await OrderCreated.publish({
   orderId: "ORDER-123",
   amount: 1500,
-  customerTier: "premium"
+  customerTier: "premium",
 });
 
 // Batch events (automatic chunking)
@@ -142,7 +142,7 @@ When EventBridge rules send to HTTP destinations (Cloudflare Queue, webhooks), `
 // ✅ CORRECT - Use z.coerce.number() for HTTP destinations
 const OrderCreated = new Event({
   schema: z.object({
-    amount: z.coerce.number(),    // Handles "1500" → 1500
+    amount: z.coerce.number(), // Handles "1500" → 1500
     timestamp: z.coerce.number(), // HTTP serialization safe
   }),
 });
@@ -150,7 +150,7 @@ const OrderCreated = new Event({
 // ❌ WRONG - Will fail in consumer
 const BadEvent = new Event({
   schema: z.object({
-    amount: z.number(),  // 💥 Gets "1500" string, expects number
+    amount: z.number(), // 💥 Gets "1500" string, expects number
   }),
 });
 ```
@@ -160,6 +160,7 @@ const BadEvent = new Event({
 EventKit gives you full control over EventBridge client configuration. Pattern generation and type safety work without any configuration - bus configuration is only needed when publishing events.
 
 ### SST Projects
+
 ```typescript
 import { Bus, Event } from "@divmode/eventkit/runtime";
 import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
@@ -168,15 +169,17 @@ import { Resource } from "sst";
 const OrderCreated = new Event({
   name: "order.created",
   source: "order-service",
-  bus: () => new Bus({
-    name: Resource.Bus.name, // SST Resource
-    EventBridge: new EventBridgeClient(),
-  }),
+  bus: () =>
+    new Bus({
+      name: Resource.Bus.name, // SST Resource
+      EventBridge: new EventBridgeClient(),
+    }),
   schema: OrderSchema,
 });
 ```
 
 ### Standalone Usage
+
 ```typescript
 import { Bus, Event } from "@divmode/eventkit/runtime";
 import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
@@ -184,18 +187,20 @@ import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
 const OrderCreated = new Event({
   name: "order.created",
   source: "order-service",
-  bus: () => new Bus({
-    name: "my-event-bus", // Explicit bus name
-    EventBridge: new EventBridgeClient({
-      region: "us-east-1",
-      maxAttempts: 3,
+  bus: () =>
+    new Bus({
+      name: "my-event-bus", // Explicit bus name
+      EventBridge: new EventBridgeClient({
+        region: "us-east-1",
+        maxAttempts: 3,
+      }),
     }),
-  }),
   schema: OrderSchema,
 });
 ```
 
 ### Multiple Buses
+
 ```typescript
 import { Bus, Event } from "@divmode/eventkit/runtime";
 import { EventBridgeClient } from "@aws-sdk/client-eventbridge";
@@ -207,8 +212,8 @@ const analyticsClient = new EventBridgeClient({ region: "eu-west-1" });
 const orderBus = () => new Bus({ name: "orders", EventBridge: orderClient });
 const analyticsBus = () => new Bus({ name: "analytics", EventBridge: analyticsClient });
 
-const OrderCreated = new Event({ bus: orderBus, /* ... */ });
-const UserActivity = new Event({ bus: analyticsBus, /* ... */ });
+const OrderCreated = new Event({ bus: orderBus /* ... */ });
+const UserActivity = new Event({ bus: analyticsBus /* ... */ });
 ```
 
 ## 🚀 Publishing Events
@@ -217,27 +222,26 @@ const UserActivity = new Event({ bus: analyticsBus, /* ... */ });
 
 EventKit provides complete type safety for event publishing with full IntelliSense support and compile-time validation.
 
-
 ```typescript
 // Single event - fully typed and validated
 await OrderCreated.publish({
-  orderId: "ORDER-123",    // ✅ TypeScript enforces string type
-  amount: 1500,            // ✅ TypeScript enforces number type
-  customerTier: "premium"  // ✅ TypeScript enforces enum values
+  orderId: "ORDER-123", // ✅ TypeScript enforces string type
+  amount: 1500, // ✅ TypeScript enforces number type
+  customerTier: "premium", // ✅ TypeScript enforces enum values
 });
 
 // ❌ TypeScript errors - caught at compile time
 await OrderCreated.publish({
-  orderId: 123,            // ❌ Error: Type 'number' is not assignable to type 'string'
-  amount: "1500",          // ❌ Error: Type 'string' is not assignable to type 'number'
-  customerTier: "gold",    // ❌ Error: Argument not assignable to parameter of type '"basic" | "premium" | "enterprise"'
-  invalidField: "value"    // ❌ Error: Object literal may only specify known properties
+  orderId: 123, // ❌ Error: Type 'number' is not assignable to type 'string'
+  amount: "1500", // ❌ Error: Type 'string' is not assignable to type 'number'
+  customerTier: "gold", // ❌ Error: Argument not assignable to parameter of type '"basic" | "premium" | "enterprise"'
+  invalidField: "value", // ❌ Error: Object literal may only specify known properties
 });
 
 // Batch events (automatically chunked and optimized)
 await OrderCreated.publish([
-  { orderId: "1", amount: 100, customerTier: "basic" },      // ✅ All types validated
-  { orderId: "2", amount: 200, customerTier: "premium" },    // ✅ IntelliSense autocomplete
+  { orderId: "1", amount: 100, customerTier: "basic" }, // ✅ All types validated
+  { orderId: "2", amount: 200, customerTier: "premium" }, // ✅ IntelliSense autocomplete
   { orderId: "3", amount: 300, customerTier: "enterprise" }, // ✅ Enum validation
 ]);
 ```
@@ -245,6 +249,7 @@ await OrderCreated.publish([
 ### Advanced Publishing Patterns
 
 **Transaction Pattern** - Only publish if database succeeds
+
 ```typescript
 const events = [];
 await db.transaction(async (tx) => {
@@ -259,6 +264,7 @@ await OrderCreated.publish(events);
 ```
 
 **Conditional Collection**
+
 ```typescript
 const events = [];
 if (shouldNotifyUser) {
@@ -273,6 +279,7 @@ if (events.length > 0) {
 ```
 
 **Error Recovery**
+
 ```typescript
 const failedEvents = [];
 for (const order of orders) {
@@ -294,6 +301,7 @@ if (failedEvents.length > 0) {
 - **`create(data)`** - Validates and returns event entry for deferred sending
 
 **Automatic Chunking Features:**
+
 - Smart batching at 10 events per request (AWS limit)
 - Size management for 256KB payload limit
 - Parallel processing for maximum throughput
@@ -306,43 +314,45 @@ Generate type-safe EventBridge patterns from your Zod schemas:
 ```typescript
 // Single event patterns
 const pattern = OrderCreated.pattern({
-  orderId: [{ prefix: "ORDER-" }],         // String operators
-  amount: [{ numeric: [">", 1000] }],      // Numeric operators
+  orderId: [{ prefix: "ORDER-" }], // String operators
+  amount: [{ numeric: [">", 1000] }], // Numeric operators
   customerTier: ["premium", "enterprise"], // Enum validation
 });
 
 // Multi-event patterns
 const multiPattern = Event.computePattern([OrderCreated, OrderUpdated], {
-  $or: [
-    { status: ["urgent"] },
-    { amount: [{ numeric: [">", 10000] }] }
-  ]
+  $or: [{ status: ["urgent"] }, { amount: [{ numeric: [">", 10000] }] }],
 });
 ```
 
 ### Use with Any Infrastructure Tool
 
 **AWS SDK**
+
 ```typescript
 import { PutRuleCommand } from "@aws-sdk/client-eventbridge";
 
-await client.send(new PutRuleCommand({
-  Name: "HighValueOrders",
-  EventPattern: JSON.stringify(pattern),
-}));
+await client.send(
+  new PutRuleCommand({
+    Name: "HighValueOrders",
+    EventPattern: JSON.stringify(pattern),
+  }),
+);
 ```
 
 **AWS CDK**
-```typescript
-import { Rule } from 'aws-cdk-lib/aws-events';
 
-new Rule(this, 'HighValueOrders', {
+```typescript
+import { Rule } from "aws-cdk-lib/aws-events";
+
+new Rule(this, "HighValueOrders", {
   eventPattern: pattern,
-  targets: [new SqsQueue(myQueue)]
+  targets: [new SqsQueue(myQueue)],
 });
 ```
 
 **Terraform**
+
 ```hcl
 resource "aws_cloudwatch_event_rule" "high_value_orders" {
   name          = "HighValueOrders"
@@ -411,21 +421,18 @@ Create type-safe Lambda handlers:
 ```typescript
 import { createEventHandler } from "@divmode/eventkit/runtime";
 
-export const handler = createEventHandler(
-  [OrderCreated, OrderUpdated],
-  async (event) => {
-    switch (event.type) {
-      case "order.created":
-        // event.properties is fully typed!
-        const { orderId, amount } = event.properties;
-        await processNewOrder({ orderId, amount });
-        break;
-      case "order.updated":
-        await updateOrder(event.properties);
-        break;
-    }
+export const handler = createEventHandler([OrderCreated, OrderUpdated], async (event) => {
+  switch (event.type) {
+    case "order.created":
+      // event.properties is fully typed!
+      const { orderId, amount } = event.properties;
+      await processNewOrder({ orderId, amount });
+      break;
+    case "order.updated":
+      await updateOrder(event.properties);
+      break;
   }
-);
+});
 ```
 
 ### SST Integration
@@ -449,17 +456,17 @@ import { OrderCreated, OrderUpdated } from "./events";
 // Single event rule with type-safe filtering
 const highValueOrderRule = createEventRule(OrderCreated, {
   name: "ProcessHighValueOrders",
-  bus: myEventBus,                    // SST Bus resource
+  bus: myEventBus, // SST Bus resource
   filter: {
-    amount: [{ numeric: [">", 1000] }],        // ✅ Fully typed filters
-    customerTier: ["premium", "enterprise"]    // ✅ Enum validation
+    amount: [{ numeric: [">", 1000] }], // ✅ Fully typed filters
+    customerTier: ["premium", "enterprise"], // ✅ Enum validation
   },
   target: {
-    destination: processingQueue,     // SST Queue resource
+    destination: processingQueue, // SST Queue resource
     transform: (event) => ({
-      orderId: event.orderId,         // ✅ Full type safety
-      amount: event.amount,           // ✅ IntelliSense support
-      priority: "high"                // ✅ Add custom fields
+      orderId: event.orderId, // ✅ Full type safety
+      amount: event.amount, // ✅ IntelliSense support
+      priority: "high", // ✅ Add custom fields
     }),
   },
 });
@@ -469,13 +476,10 @@ const orderProcessingRule = createEventRule([OrderCreated, OrderUpdated], {
   name: "OrderWorkflow",
   bus: myEventBus,
   filter: {
-    $or: [
-      { status: ["pending"] },
-      { amount: [{ numeric: [">", 500] }] }
-    ]
+    $or: [{ status: ["pending"] }, { amount: [{ numeric: [">", 500] }] }],
   },
   target: {
-    destination: workflowFunction,    // SST Function resource
+    destination: workflowFunction, // SST Function resource
     // Transform is optional - sends full event by default
   },
 });
@@ -484,6 +488,7 @@ const orderProcessingRule = createEventRule([OrderCreated, OrderUpdated], {
 #### Advanced SST Patterns
 
 **Multiple Targets per Rule**
+
 ```typescript
 createEventRule(OrderCreated, {
   name: "OrderCreatedFanout",
@@ -492,21 +497,22 @@ createEventRule(OrderCreated, {
   targets: [
     {
       destination: analyticsQueue,
-      transform: (event) => ({ customerId: event.customerId, amount: event.amount })
+      transform: (event) => ({ customerId: event.customerId, amount: event.amount }),
     },
     {
       destination: notificationService,
-      transform: (event) => ({ orderId: event.orderId, email: event.customerEmail })
+      transform: (event) => ({ orderId: event.orderId, email: event.customerEmail }),
     },
     {
       destination: auditFunction,
       // Send full event without transformation
-    }
-  ]
+    },
+  ],
 });
 ```
 
 **Cross-Stack Event Rules**
+
 ```typescript
 // In your infrastructure stack
 export const orderBus = new sst.aws.Bus("OrderBus");
@@ -515,13 +521,14 @@ export const processingQueue = new sst.aws.Queue("ProcessingQueue");
 // In your application stack
 createEventRule(OrderCreated, {
   name: "CrossStackRule",
-  bus: orderBus,              // Reference from infrastructure stack
+  bus: orderBus, // Reference from infrastructure stack
   filter: { amount: [{ numeric: [">", 10000] }] },
   target: {
-    destination: processingQueue,  // Reference from infrastructure stack
-  }
+    destination: processingQueue, // Reference from infrastructure stack
+  },
 });
 ```
+
 **Note:** SST integration requires SST v3+ and works seamlessly with EventKit's standalone usage patterns.
 
 ## 🔧 EventBridge Query String Parameters
@@ -546,14 +553,13 @@ params = {k: v for k, v in request.query_params.items() if v}
 
 ```typescript
 // JavaScript/TypeScript
-const params = Object.fromEntries(
-  Object.entries(req.query).filter(([_, v]) => v)
-);
+const params = Object.fromEntries(Object.entries(req.query).filter(([_, v]) => v));
 ```
 
 ### Complete Example
 
 **Step 1: Define Event with params schema**
+
 ```typescript
 import { Event, Bus } from "@divmode/eventkit/runtime";
 import { z } from "zod";
@@ -576,6 +582,7 @@ const SearchRequested = new Event({
 ```
 
 **Step 2: Create EventBridge rule (SST)**
+
 ```typescript
 import { createEventRule } from "@divmode/eventkit/sst";
 
@@ -594,6 +601,7 @@ createEventRule(SearchRequested, {
 ```
 
 **Step 3: Filter empty params in your endpoint**
+
 ```python
 # Python (FastAPI)
 @app.get("/search")
@@ -611,7 +619,7 @@ If you don't want to deal with empty query params, use `transform` to send param
 createEventRule(MyEvent, {
   target: {
     transform: (event) => ({
-      params: event.params,  // Only actual values, no empty strings
+      params: event.params, // Only actual values, no empty strings
     }),
   },
 });
@@ -639,13 +647,16 @@ schemaToJsonPaths(QueryParams, "params");
 ```
 
 **AWS CDK example:**
+
 ```typescript
 new Rule(this, "MyRule", {
-  targets: [new ApiDestination(dest, {
-    httpParameters: {
-      queryStringParameters: schemaToJsonPaths(MySchema, "params"),
-    },
-  })],
+  targets: [
+    new ApiDestination(dest, {
+      httpParameters: {
+        queryStringParameters: schemaToJsonPaths(MySchema, "params"),
+      },
+    }),
+  ],
 });
 ```
 
@@ -676,6 +687,7 @@ Your Event definitions become the source of truth for your event contracts acros
 Returns EventBridge-compatible JSON for creating rules
 
 **`publish(data)`** - Validate and send events to EventBridge
+
 - `publish(eventData)` - Single event
 - `publish([data1, data2])` - Batch of same type
 - `publish([entry1, entry2])` - Mixed types from `create()` (same bus only)
@@ -715,27 +727,28 @@ import { z } from "zod";
 const OrderCreated = new Event({
   name: "order.created",
   source: "ecommerce-api",
-  bus: () => new Bus({
-    name: "ecommerce-bus",
-    EventBridge: new EventBridgeClient(),
-  }),
+  bus: () =>
+    new Bus({
+      name: "ecommerce-bus",
+      EventBridge: new EventBridgeClient(),
+    }),
   schema: z.object({
     orderId: z.string(),
     amount: z.number(),
     customerTier: z.enum(["basic", "premium", "enterprise"]),
     items: z.array(z.string()),
-  })
+  }),
 });
 
 // Business rules as type-safe patterns
 const highValuePattern = OrderCreated.pattern({
   amount: [{ numeric: [">", 1000] }],
-  customerTier: ["premium", "enterprise"]
+  customerTier: ["premium", "enterprise"],
 });
 
 const enterprisePattern = OrderCreated.pattern({
   customerTier: ["enterprise"],
-  items: [{ exists: true }]
+  items: [{ exists: true }],
 });
 
 // Use with any infrastructure tool
