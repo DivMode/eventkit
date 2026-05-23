@@ -82,7 +82,7 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
-    "@pulumi/aws": "^6.0.0",
+    "@pulumi/aws": "^7.0.0",
     "@types/aws-lambda": "^8.10.145",
     "@types/bun": "^1.2.22",
     "@types/node": "^20.0.0",
@@ -106,7 +106,7 @@
   },
   "optionalDependencies": {
     "@aws-sdk/client-schemas": "^3.0.0",
-    "@pulumi/aws": "^6.0.0",
+    "@pulumi/aws": "^7.0.0",
     "@pulumi/pulumi": "^3.0.0"
   },
   "engines": {
