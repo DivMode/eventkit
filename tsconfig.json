@@ -27,7 +27,6 @@
     "rootDir": "./src",
     "removeComments": false,
     "importHelpers": false,
-    "downlevelIteration": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
